@@ -1,0 +1,178 @@
+{
+	"scopeName": "source.descent",
+	"patterns": [
+		{
+			"include": "#comment"
+		},
+		{
+			"include": "#keyword"
+		},
+		{
+			"include": "#storage"
+		},
+		{
+			"include": "#operator"
+		},
+		{
+			"include": "#constant"
+		},
+		{
+			"include": "#type"
+		},
+		{
+			"include": "#variable"
+		}
+	],
+	"repository": {
+		"comment": {
+			"patterns": [
+				{
+					"name": "comment.line.double-slash",
+					"begin": "//",
+					"end": "$"
+				},
+				{
+					"name": "comment.block",
+					"begin": "/\\*",
+					"end": "\\*/"
+				}
+			]
+		},
+		"keyword": {
+			"patterns": [
+				{
+					"name": "keyword",
+					"match": "(?<!\\.)\\b(class|enum|interface|fn|op|get|set)(?!\\s*:)\\b"
+				},
+				{
+					"name": "keyword.control",
+					"match": "(?<!\\.)\\b(for|in|while|if|else|switch|continue|break|return|yield)(?!\\s*:)\\b"
+				},
+				{
+					"name": "keyword.other.new",
+					"match": "new"
+				},
+				{
+					"name": "keyword.operator",
+					"match": "(?<!\\.)\\b(in|is)(?!\\s*:)\\b"
+				},
+				{
+					"name": "keyword.operator.type",
+					"match": ":"
+				},
+				{
+					"name": "variable.language",
+					"match": "(?<!\\.)\\b(this|This|super|global)(?!\\s*:)\\b"
+				}
+			]
+		},
+		"storage": {
+			"patterns": [
+				{
+					"name": "storage",
+					"match": "(?<!\\.)\\b(extends|implement|public|protected|private|static|abstract|async)(?!\\s*:)\\b"
+				},
+				{
+					"name": "storage.type",
+					"match": "(?<!\\.)\\b(let)(?!\\s*:)\\b"
+				}
+			]
+		},
+		"operator": {
+			"patterns": [
+				{
+					"name": "keyword.operator.relational",
+					"match": "<|>|<=|>=|==|!="
+				},
+				{
+					"name": "keyword.operator.bitwise",
+					"match": "&|\\||\\^|<<|>>|~"
+				},
+				{
+					"name": "keyword.operator.logical",
+					"match": "&&|\\|\\||\\?\\?|!"
+				},
+				{
+					"name": "keyword.operator.arithmetic",
+					"match": "\\+|-|\\*|/|%|\\*\\*"
+				},
+				{
+					"name": "keyword.operator.increment",
+					"match": "\\+\\+"
+				},
+				{
+					"name": "keyword.operator.decrement",
+					"match": "--"
+				},
+				{
+					"name": "keyword.operator.assignment",
+					"match": "="
+				},
+				{
+					"name": "keyword.operator.spread",
+					"match": "\\.\\.\\."
+				},
+				{
+					"name": "keyword.operator.range",
+					"match": "\\.\\."
+				}
+			]
+		},
+		"string": {
+			"patterns": [
+				{
+					"name": "string",
+					"begin": "\"",
+					"end": "\""
+				},
+				{
+					"name": "string.template",
+					"begin": "`",
+					"end": "`",
+					"patterns": [
+						{
+							"name": "variable.interpolation",
+							"begin": "{",
+							"end": "}",
+							"patterns": [
+								{
+									"include": "$self"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		"number": {
+			"name": "constant.numeric",
+			"match": "\\d+(.\\d+)?"
+		},
+		"constant": {
+			"patterns": [
+				{
+					"include": "#string"
+				},
+				{
+					"include": "#number"
+				},
+				{
+					"name": "constant.language",
+					"match": "(?<!\\.)\\b(nan|infinity)(?!\\s*:)\\b"
+				},
+				{
+					"name": "constant.language.boolean",
+					"match": "(?<!\\.)\\b(true|false)(?!\\s*:)\\b"
+				},
+				{
+					"name": "constant.language.null",
+					"match": "(?<!\\.)\\b(none)(?!\\s*:)\\b"
+				}
+			]
+		},
+		"variable": {
+			"name": "variable",
+			"match": "[a-zA-Z_][\\w]*"
+		}
+	}
+}

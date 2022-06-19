@@ -1,0 +1,47 @@
+@import url("https://fonts.googleapis.com/css2?family=Fira+Code&display=swap");
+
+:root {
+	--color-accent: firebrick;
+	--color-accent-variant: crimson;
+	--color-background: #292e3e;
+	--color-foreground: #252b3d;
+	--color-foreground-variant: #2c3348;
+	--color-primary: darkslateblue;
+	--color-primary-variant: slateblue;
+	--color-text: #e6dbdb;
+}
+
+html {
+	font-family: 'Fira Code', monospace;
+	background: var(--color-foreground-variant);
+	color: var(--color-text);
+}
+
+[type=text] {
+	color: var(--color-text);
+}
+
+::placeholder {
+	color: var(--color-text);
+	filter: opacity(70%);
+}
+
+::-webkit-scrollbar {
+	width: 15px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--color-foreground-variant);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--color-primary);
+}
+
+::-webkit-scrollbar-corner {
+	background: var(--color-foreground-variant);
+}

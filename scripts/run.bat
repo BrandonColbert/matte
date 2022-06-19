@@ -1,0 +1,1 @@
+cmd /c "cd project && lua54 src/main.lua -srcPath=""examples/test.dt"""
