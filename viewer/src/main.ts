@@ -1,8 +1,9 @@
 import fs from "fs/promises"
 import fsSync from "fs"
-import path from "path"
 import util from "util"
+import http from "http"
 import open from "open"
+import chokidar from "chokidar"
 import Server from "./server.js"
 import * as childProcess from "child_process"
 import {promisify} from "util"
@@ -40,31 +41,32 @@ async function run(): Promise<void> {
 			})
 
 			// Generate output for new connections
-			server.on("connected", () => generate())
+			server.on("connected", async (req: http.IncomingMessage) => {
+				if(await generate())
+					console.log(`\ngenerated for client: ${req.headers.origin}`)
+			})
 		} else // Generate output immediately
 			generate()
 
 		// Watch files to regenerate output and exit on keypress
 		if("watch" in options) {
-			let directories = [
+			let paths = [
 				options.parser,
 				options.srcPath
 			].filter(d => d != null)
 
 			// Regenerate output when parser files or source file change
-			for(let directory of directories)
-				fsSync.watch(
-					directory,
-					{recursive: true},
-					() => generate()
-				)
+			for(let path of paths)
+				chokidar.watch(path).on("change", async path => {
+					if(await generate())
+						console.log(`\nregenerated for file: ${path}`)
+				})
 
 			// Reload viewer page since source changed
-			fsSync.watch(
-				appPath,
-				{recursive: true},
-				() => server.send("reload")
-			)
+			chokidar.watch(appPath).on("change", path => {
+				server.send("reload")
+				console.log(`\nreloaded for file: ${path}`)
+			})
 
 			// Exit on any key press
 			process.stdin.setRawMode(true)
@@ -76,8 +78,9 @@ async function run(): Promise<void> {
 
 /**
  * Generate parser output
+ * @returns Whether output could be generated
  */
-async function generate(): Promise<void> {
+async function generate(): Promise<boolean> {
 	let args: string[] = []
 
 	// Add lua executable name
@@ -103,15 +106,22 @@ async function generate(): Promise<void> {
 	else if("srcPath" in options) {
 		try {
 			let data = await fs.readFile(options.srcPath)
-			let src = data.toString().trim()
+			let text = data.toString()
+			let src = text.trim()
 
-			if(!src)
-				return
+			if(!text) {
+				let stats = await fs.stat(options.srcPath)
+
+				if(stats.size > 0) {
+					console.log(`\nUnable to read file: ${options.srcPath}`)
+					return false
+				}
+			}
 
 			args.push(`-src=${JSON.stringify(src)}`)
 		} catch(e) {
 			console.log(e instanceof Error ? e.message : e)
-			return
+			return false
 		}
 	} else
 		throw new Error("No source specified")
@@ -128,7 +138,7 @@ async function generate(): Promise<void> {
 		if(e instanceof Error)
 			console.error(e.message)
 
-		return
+		return false
 	}
 
 	// Convert last line of parser output to JSON ast
@@ -142,7 +152,7 @@ async function generate(): Promise<void> {
 			if(e instanceof Error)
 				console.log(`Last line of output is not valid JSON:\n\t${lines.join("\n\t")}`)
 
-			return
+			return false
 		}
 
 		// Print syntax tree to console
@@ -165,6 +175,8 @@ async function generate(): Promise<void> {
 		if(text)
 			console.log(`\n${text}`)
 	}
+
+	return true
 }
 
 // Start the viewer

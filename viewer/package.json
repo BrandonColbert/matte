@@ -13,6 +13,7 @@
 		"@types/node": "^17.0.43"
 	},
 	"dependencies": {
+		"chokidar": "^3.5.3",
 		"open": "^8.4.0"
 	}
 }

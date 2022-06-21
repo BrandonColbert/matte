@@ -96,7 +96,7 @@ function RuleNode:__tostring()
 					return string.format("[%s]", table.concat(list(entry)
 							:map(function(node) -- Convert nodes into strings
 								if node == self then
-									return "self"
+									return [["self"]]
 								else
 									return tostring(node)
 								end
@@ -277,7 +277,12 @@ function RuleNode:integrate(token, branchIndex, entryIndex, nodeIndex)
 				for i = math.max(1, #entries), #rset do
 					if self:integrate(token, branchIndex, i) then
 						return true
-					elseif not self:complete(branchIndex, i) then
+					elseif self:complete(branchIndex, i) then
+						-- Remove incomplete branches in entry nodes since requirement index is advancing
+						for node in list(self.branches[branchIndex][i]):values() do
+							node:integrate()
+						end
+					else
 						break
 					end
 				end
@@ -337,21 +342,23 @@ function RuleNode:integrate(token, branchIndex, entryIndex, nodeIndex)
 			end
 		end
 	else
-		-- Remove incomplete branches
-		-- # TODO Attempt to obviate
+		-- Remove incomplete branches when no token is specified
 		if self:complete() then
 			local incomplete = {}
 
+			-- Gather incomplete branches
 			for i in pairs(self.branches) do
 				if not self:complete(i) then
 					table.insert(incomplete, i)
 				end
 			end
 
+			-- Remove incomplete branches
 			for v in list(incomplete):values() do
 				self.branches[v] = nil
 			end
 
+			-- Do the same for each child node
 			for _, entries in pairs(self.branches) do
 				for entry in list(entries):values() do
 					for node in list(entry):values() do
