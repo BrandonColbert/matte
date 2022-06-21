@@ -1,15 +1,23 @@
 --- Used to perform list operations
+--- @generic TItem
 --- @class List
---- @field items any[]
+--- @field items TItem[]
 local List = {}
 List.__index = List
 
---- @param items any[]
+--- @param items TItem[]
+--- @return List
 function List:new(items)
 	local o = {items=items}
 	setmetatable(o, self)
 
 	return o
+end
+
+--- Returns the items of the list
+--- @return TItem[]
+function List:table()
+	return {table.unpack(self.items)}
 end
 
 --- Returns an iterator for the key-value pairs of the list
@@ -32,7 +40,7 @@ function List:keys()
 end
 
 --- Returns an iterator for the list's values
---- @return fun(): any
+--- @return fun(): TItem
 function List:values()
 	local i = 0
 
@@ -47,7 +55,7 @@ end
 
 --- Returns the item at the index
 --- @param index number Item index
---- @return any
+--- @return TItem
 function List:at(index)
 	if index < 0 then
 		index = 1 + #self + index
@@ -57,7 +65,7 @@ function List:at(index)
 end
 
 --- Returns whether every item passed the test
---- @param predicate fun(item: any, index?: number): boolean Test function
+--- @param predicate fun(item: TItem, index?: number): boolean Test function
 --- @return boolean
 function List:every(predicate)
 	for key, value in self:entries() do
@@ -70,7 +78,7 @@ function List:every(predicate)
 end
 
 --- Returns whether at least one item passed the test
---- @param predicate fun(item: any, index?: number): boolean Test function
+--- @param predicate fun(item: TItem, index?: number): boolean Test function
 --- @return boolean
 function List:some(predicate)
 	for key, value in self:entries() do
@@ -83,7 +91,7 @@ function List:some(predicate)
 end
 
 --- Returns a new list with the items that passed the test
---- @param predicate fun(item: any, index?: number): boolean Test function
+--- @param predicate fun(item: TItem, index?: number): boolean Test function
 --- @return List
 function List:filter(predicate)
 	local items = {}
@@ -98,7 +106,7 @@ function List:filter(predicate)
 end
 
 --- Returns a new list with items resulting from the transformation
---- @param selector fun(item: any, index?: number): any Transformation function
+--- @param selector fun(item: TItem, index?: number): TItem Transformation function
 --- @return List
 function List:map(selector)
 	local items = {}
@@ -111,8 +119,8 @@ function List:map(selector)
 end
 
 --- Returns the first element that passes the test
---- @param predicate fun(item: any, index?: number): boolean Test function
---- @return any
+--- @param predicate fun(item: TItem, index?: number): boolean Test function
+--- @return TItem
 function List:find(predicate)
 	for key, value in self:entries() do
 		if predicate(value, key) then
@@ -124,8 +132,8 @@ function List:find(predicate)
 end
 
 --- Returns the index of the first element that passes the test
---- @param predicate fun(item: any, index?: number): boolean Test function
---- @return any
+--- @param predicate fun(item: TItem, index?: number): boolean Test function
+--- @return TItem
 function List:findIndex(predicate)
 	for key, value in self:entries() do
 		if predicate(value, key) then
@@ -139,7 +147,7 @@ end
 --- Adds, removes, or replaces items in-place.
 --- @param startIndex number Position to begin splicing
 --- @param deleteCount number Items to remove after the start index
---- @param ... any Items to add after deleting
+--- @param ... TItem Items to add after deleting
 --- @return List List containg the deleted items
 function List:splice(startIndex, deleteCount, ...)
 	local removed = {}
@@ -157,33 +165,34 @@ function List:splice(startIndex, deleteCount, ...)
 end
 
 --- Adds items to the end of the list
---- @param ... any Items to add
+--- @param ... TItem Items to add
 function List:push(...)
 	self:splice(#self + 1, 0, ...)
 end
 
 --- Removes and returns the last item of the list
---- @return any
+--- @return TItem
 function List:pop()
 	return self:splice(#self, 1):at(1)
 end
 
 --- Adds items to the start of the list
---- @param ... any Items to add
+--- @param ... TItem Items to add
 function List:unshift(...)
 	self:splice(1, 0, ...)
 end
 
 --- Removes and return the first item of the list
---- @return any
+--- @return TItem
 function List:shift(...)
 	return self:splice(1, 1):at(1)
 end
 
 --- Returns the result of reducing the list
---- @param reducer fun(previous: any, current: any): any
---- @param initialValue any
---- @return any
+--- @generic TResult
+--- @param reducer fun(previous: TResult, current: TItem): TResult
+--- @param initialValue TResult
+--- @return TItem
 function List:reduce(reducer, initialValue)
 	local result, start
 	
@@ -241,7 +250,7 @@ function List:slice(startIndex, endIndex)
 end
 
 --- Returns a new list with items in the specified order
---- @param comparator fun(a: any, b: any): boolean Whether the first item should come first
+--- @param comparator fun(a: TItem, b: TItem): boolean Whether the first item should come first
 --- @return List
 function List:sort(comparator)
 	local items = {table.unpack(self.items)}
@@ -251,9 +260,24 @@ function List:sort(comparator)
 end
 
 --- Returns the items of the list
---- @return any 
+--- @return TItem 
 function List:unpack()
 	return table.unpack(self.items)
+end
+
+--- Returns a list of the item repeated a specified number of times
+--- @param count? number Number of repetitions
+--- @return T[]
+function List:repeated(count)
+	local items = {}
+
+	for i = 1, count do
+		for j = 1, #self do
+			table.insert(items, self.items[j])
+		end
+	end
+
+	return List:new(items)
 end
 
 --- @param other List
@@ -284,7 +308,8 @@ function List:__tostring()
 end
 
 --- Returns list with the given items
---- @param items any[]
+--- @generic T
+--- @param items T[]
 --- @return List
 function list(items)
 	return List:new(items)

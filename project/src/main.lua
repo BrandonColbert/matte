@@ -1,5 +1,5 @@
-local Descent = require "src.descent"
-local list = require "src.utils.list"
+local Descent = require "descent"
+local list = require "utils.list"
 
 -- Acquire command line arguments
 local options = list(arg):reduce(function(o, entry)

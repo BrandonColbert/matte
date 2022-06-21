@@ -1,5 +1,5 @@
-local Descend = require "src.lang.descend"
-require "src.grammar"
+local Descend = require "lang.descend"
+require "grammar"
 
 --- @class Descent
 local Descent = {}
@@ -17,7 +17,7 @@ end
 
 --- Runs the given Descent code with the specified CLI arguments
 --- @param src string Descent source code
---- @param  ... string[] Command line arguments
+--- @param ... string[] Command line arguments
 --- @return ...
 function Descent.run(src, ...)
 	local result = Descent.transpile(ast)

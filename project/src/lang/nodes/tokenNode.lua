@@ -1,21 +1,16 @@
-local Node = require "src.lang.nodes.node"
+local Node = require "lang.nodes.node"
 
---[[
-	symbol: Token
-		Token being realized
-	token: Lexer.Token
-		Signifies the token value used to fulfill the requirement
-]]
+--- A node correlated with a particular token
+--- @class TokenNode: Node
+--- @field symbol Token Token being realized
+--- @field token Lexer.Section Signifies the token used to fulfill the requirement
 local TokenNode = {}
 TokenNode.__index = TokenNode
 setmetatable(TokenNode, Node)
 
---[[
-	token: Token
-		Token being realized
-	depth?: number
-		Current depth in the syntax tree
-]]
+--- @param token Token Token being realized
+--- @param depth? number Current depth in the syntax tree
+--- @return TokenNode
 function TokenNode:new(token, depth)
 	local o = Node:new(token, depth)
 	o.token = nil
@@ -25,6 +20,7 @@ function TokenNode:new(token, depth)
 	return o
 end
 
+--- @return Lexer.Section[]
 function TokenNode:getTokens()
 	if self.token then
 		return {self.token}
@@ -33,6 +29,7 @@ function TokenNode:getTokens()
 	return Node.getTokens(self)
 end
 
+--- @return TokenNode
 function TokenNode:clone()
 	local node = TokenNode:new(self.symbol, self.depth)
 	node.token = self.token
@@ -40,6 +37,7 @@ function TokenNode:clone()
 	return node
 end
 
+--- @return boolean
 function TokenNode:complete()
 	if self.token then
 		return true
@@ -48,11 +46,14 @@ function TokenNode:complete()
 	return Node.complete(self)
 end
 
+--- @param token? Lexer.Section
+--- @return boolean
 function TokenNode:integrate(token)
 	if token then
-		self:log(tostring(self.symbol) .. " <- " .. tostring(token))
+		self:log(string.format("%s <- %s", self.symbol, token))
 
-		if not self:complete() and token:has(self.symbol) then
+		-- If no token already exists and the token is applicable, use it
+		if not self:complete() and token:is(self.symbol) then
 			self.token = token
 			return true
 		end
@@ -63,20 +64,22 @@ function TokenNode:integrate(token)
 	return Node.integrate(self, token)
 end
 
-function TokenNode.__len(o)
-	return Node.__len(o)
+--- @return number
+function TokenNode:__len()
+	return Node.__len(self)
 end
 
-function TokenNode.__tostring(o)
-	if o.token then
+--- @return string
+function TokenNode:__tostring()
+	if self.token then
 		return string.format(
 			[[{"symbol":"%s","value":"%s"}]],
-			tostring(o.symbol),
-			tostring(o.token.value)
+			tostring(self.symbol),
+			tostring(self.token.text)
 		)
 	end
 
-	return Node.__tostring(o)
+	return Node.__tostring(self)
 end
 
 return TokenNode

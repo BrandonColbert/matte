@@ -1,147 +1,132 @@
-local Symbol = require "src.lang.symbols.symbol"
-local Token = require "src.lang.symbols.token"
+local Symbol = require "lang.symbols.symbol"
+local Token = require "lang.symbols.token"
+local list = require "utils.list"
 
---[[
-	Denotes groups of tokens and rules as a discrete structure
-
-	rsets: Requirement.Set[]
-		List of requirement sets that may be fulfilled.
-]]
+--- Denotes multiple variations of a symbol sequence as a discrete structure.
+--- @class Rule: Symbol
+--- @field rsets Rule.Requirement.Set[] Requirements sets that may be fulfilled.
 local Rule = {}
 Rule.__index = Rule
 setmetatable(Rule, Symbol)
 
---[[
-	Creates and registers a named rule
-
-	name: string
-		Rule name
-	...entries: (Symbol | string)[]
-		Sequence of symbol with quantifiers that must be present for this rule to be fulfilled.
-
-		If this consists of a single rule, the requirement sets will be copied.
-
-	Creates a nameless rule
-
-	...entries: (Symbol | string)[]
-		Sequence of symbol with quantifiers that must be present for this rule to be fulfilled.
-
-		If this consists of a single rule, the requirement sets will be copied.
-]]
+--- Creates a new rule with the given name and an optional singular set of requirements.
+---
+--- If no name is specified, the rule will be considered anonymous
+--- @overload fun(name: string, firstEntry?: Symbol, ...: Symbol | string): Rule
+--- @overload fun(firstEntry?: Symbol, ...: Symbol | string): Rule
+--- @return Rule
 function Rule:new(...)
-	local name
-	local args = {...}
+	local name, args = nil, {...}
 
-	if #args >= 1 and type(args[1]) == "string" then -- Named
+	-- Get name if specified
+	if #args >= 1 and type(args[1]) == "string" then
 		name = table.remove(args, 1)
-	else -- Nameless
-		name = nil
 	end
 
+	-- Create the rule
 	local o = Symbol:new(name)
 	o.rsets = {}
 	setmetatable(o, self)
 
+	-- Add base requirements
 	o:addRequirementSet(table.unpack(args))
 
 	return o
 end
 
---[[
-	Adds a base requirement set for this rule.
-
-	...entries: (Symbol | string)[]
-		The tokens and rules that must appear to match sequentially to match to this rule
-
-		Each symbol may be proceeded by the following quantifier
-			? - Optional
-			+ - Repeats 1 or more times
-			* - Repeats 0 or more times
-]]
+--- Adds a set of requirements to this rule based on the given entries.
+--- Each entry is a token, rule, or quantifier.
+---
+--- A quantifier may only be placed directly after a token, rule, or another quantifier.
+---
+--- Quantifiers may be any of the following.
+--- * `? - Optional`
+--- * `+ - Repeats 1 or more times`
+--- * `* - Repeats 0 or more times`
+---
+--- If the entries consist of a single anonymous rule, all of the anonymous rule's requirement sets will be copied directly.
+--- @param ... Symbol | string Entries for the requirement set
 function Rule:addRequirementSet(...)
 	local entries = {...}
 
-	if #entries == 0 then
+	if #entries == 0 then -- Ignore if no entries provided
 		return
-	elseif
+	elseif -- Copy requirements if single anonymous rule given
 		#entries == 1
 		and getmetatable(entries[1]) == Rule
 		and not entries[1].name
 	then
 		local rule = entries[1]
 
-		for _, rset in ipairs(rule.rsets) do
+		for rset in list(rule.rsets):values() do
 			table.insert(self.rsets, rset)
 		end
-	else
+	else -- Create a requirement set from the entries
 		table.insert(self.rsets, Rule.Requirement.Set:new(...))
 	end
 end
 
---[[
-	lhs: Rule
-	rhs: Rule
+--- Returns a new rule with the requirements of all the specified rules
+--- @param ... Rule Rules to unify
+--- @return Rule
+function Rule.unify(...)
+	local result = Rule:new()
 
-	Returns the union between the given rules
-]]
-function Rule.unify(lhs, rhs)
-	local function addRule(base, rule)
+	for rule in list{...}:values() do
 		if rule.name then
-			table.insert(base.rsets, Rule.Requirement.Set:new(rule))
+			-- Add named rules as a requirement set
+			table.insert(result.rsets, Rule.Requirement.Set:new(rule))
 		else
-			for _, rset in ipairs(rule.rsets) do
-				table.insert(base.rsets, rset)
+			-- Copy requirement sets from anonymous rules
+			for rset in list(rule.rsets):values() do
+				table.insert(result.rsets, rset)
 			end
 		end
 	end
 
-	local rule = Rule:new()
-	addRule(rule, lhs)
-	addRule(rule, rhs)
-
-	return rule
+	return result
 end
 
-function Rule.__len(o)
-	local maxSize = 0
-
-	for _, rset in ipairs(o.rsets) do
-		maxSize = math.max(#rset, maxSize)
-	end
-
-	return maxSize
+function Rule:__len()
+	return math.max(0, list(self.rsets)
+		:map(function(rset)
+			return #rset
+		end)
+		:unpack()
+	)
 end
 
+--- @param lhs Rule
+--- @param rhs Symbol
+--- @return Rule
 function Rule.__bor(lhs, rhs)
-	-- Create rule from left side rule
+	-- Confirm left side is rule
 	if not (type(lhs) == "table" and getmetatable(lhs) == Rule) then
-		error("Left hand side must be a rule: " .. tostring(lhs) .. " | " .. tostring(rhs))
+		error(string.format("Left hand side must be a rule: %s | %s", lhs, rhs))
 	end
 
-	-- Coerce right side into table for use as alternative
-	if type(rhs) == "table" then
-		if getmetatable(rhs) == Token then
-			rhs = Rule:new(rhs)
-		elseif getmetatable(rhs) ~= Rule then
-			error("Right hand side must be a token or rule: " .. tostring(lhs) .. " | " .. tostring(rhs))
-		end
-	else
-		error("Right hand side must be a table: " .. tostring(lhs) .. " | " .. tostring(rhs))
+	-- Coerce right side into rule
+	if type(rhs) == "table" and getmetatable(rhs) == Token then
+		rhs = Rule:new(rhs)
+	elseif getmetatable(rhs) ~= Rule then
+		error(string.format("Right hand side must be a token or rule: %s | %s", lhs, rhs))
 	end
 
 	return Rule.unify(lhs, rhs)
 end
 
-function Rule.__tostring(o)
-	local text = Symbol.__tostring(o)
+function Rule:__tostring()
+	local text = Symbol.__tostring(self)
 
 	if not text then
-		if #o.rsets > 0 then
-			text = "(" .. tostring(o.rsets[1]) .. ")"
+		if #self.rsets > 0 then
+			local textRequirementSets = list(self.rsets)
+				:map(function(rset)
+					return string.format("(%s)", rset)
+				end)
+				:table()
 
-			for i = 2, #o.rsets do
-				text = text .. " | (" .. tostring(o.rsets[i]) .. ")"
-			end
+			text = table.concat(textRequirementSets, " | ")
 		else
 			text = "(---)"
 		end
@@ -150,15 +135,17 @@ function Rule.__tostring(o)
 	return text
 end
 
-Rule.Requirement = {}
+--- A single requirement in one of a rule's requirement sets
+--- @class Rule.Requirement
+--- @field symbol Symbol Required symbol
+--- @field quantifier string Indicates required number of appearances for the symbol. If empty, one is required.
+local Requirement = {}
+Rule.Requirement = Requirement
 Rule.Requirement.__index = Rule.Requirement
 
---[[
-	A symbol with a quantifier.
-
-	symbol: Symbol
-	quantifier?: string
-]]
+--- @param symbol Symbol Required symbol
+--- @param quantifier? string Indicates required number of appearances for the symbol
+--- @return Rule.Requirement
 function Rule.Requirement:new(symbol, quantifier)
 	local o = {
 		symbol = symbol,
@@ -170,69 +157,68 @@ function Rule.Requirement:new(symbol, quantifier)
 	return o
 end
 
-function Rule.Requirement.__tostring(o)
-	if #o.quantifier > 0 then
-		if #o.symbol.rsets > 1 then
-			return string.format("(%s)%s", o.symbol, o.quantifier)
-		end
-
-		return tostring(o.symbol) .. o.quantifier
+function Rule.Requirement:__tostring()
+	if #self.quantifier > 0 and #self.symbol.rsets > 1 then
+		return string.format("(%s)%s", self.symbol, self.quantifier)
 	end
 
-	return tostring(o.symbol)
+	return string.format("%s%s", self.symbol, self.quantifier)
 end
 
---[[
-	A sequence of requirements that must be present to be fulfilled.
-
-	requirements: Requirement[]
-]]
-Rule.Requirement.Set = {}
+--- Represents a sequence of requirements that must be fulfilled for this set to be considered complete
+--- @class Rule.Requirement.Set
+--- @field requirements Rule.Requirement[] Sequence of requirements
+local Set = {}
+Rule.Requirement.Set = Set
 Rule.Requirement.Set.__index = Rule.Requirement.Set
 
---[[
-	...entries: (Symbol | string)[]
-]]
+--- @param ... Symbol | string Entries for this set
+--- @return Rule.Requirement.Set
 function Rule.Requirement.Set:new(...)
-	local requirements = {}
-	local entries = {...}
+	local o = {
+		requirements = list{...}
+			:reduce(function(t, entry)
+				if type(entry) == "table" then -- Symbol
+					-- Add new requirement
+					if getmetatable(entry) == Token or getmetatable(entry) == Rule then
+						table.insert(t, Rule.Requirement:new(entry))
+					else
+						error(string.format("Token or rule expected, but received '%s'", entry))
+					end
+				elseif type(entry) == "string" then -- Quantifier
+					-- Modify previous requirement to contain the new quantifier
+					local requirement = t[#t]
+					requirement.quantifier = requirement.quantifier .. entry
+				else
+					error(string.format(
+						"Token, rule, or quantifier expected, but received '%s' with value '%s'",
+						type(entry),
+						entry
+					))
+				end
 
-	for i = 1, #entries do
-		local entry = entries[i]
+				return t
+			end, {})
+	}
 
-		if type(entry) == "table" then
-			if getmetatable(entry) == Token or getmetatable(entry) == Rule then -- Symbol
-				table.insert(requirements, Rule.Requirement:new(entry))
-			else
-				error("Token or rule expected, but received '" .. tostring(entry) .. "'")
-			end
-		elseif type(entry) == "string" then -- Quantifier
-			local requirement = requirements[#requirements]
-			requirement.quantifier = requirement.quantifier .. entry
-		else
-			error("Token, rule, or quantifier expected, but received '" .. tostring(entry) .. "' of type '" .. type(entry) .. "'")
-		end
-	end
-
-	local o = {requirements = requirements}
 	setmetatable(o, self)
 
 	return o
 end
 
-function Rule.Requirement.Set.__len(o)
-	return #o.requirements
+function Rule.Requirement.Set:__len()
+	return #self.requirements
 end
 
-function Rule.Requirement.Set.__tostring(o)
-	if #o.requirements > 0 then
-		local text = tostring(o.requirements[1])
+function Rule.Requirement.Set:__tostring()
+	if #self.requirements > 0 then
+		local textRequirements = list(self.requirements)
+			:map(function(requirement)
+				return tostring(requirement)
+			end)
+			:table()
 
-		for i = 2, #o.requirements do
-			text = text .. ", " .. tostring(o.requirements[i])
-		end
-
-		return text
+		return table.concat(textRequirements, ", ")
 	end
 
 	return "---"

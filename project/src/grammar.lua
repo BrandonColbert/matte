@@ -1,41 +1,41 @@
-local Symbol = require "src.lang.symbols.symbol"
-local Token = require "src.lang.symbols.token"
-local Rule = require "src.lang.symbols.rule"
+local Symbol = require "lang.symbols.symbol"
+local Rule = require "lang.symbols.rule"
 
---- Returns the direct token for the content
---- @param content string Content to match
+--- Returns the direct token with the corresponding name
+--- @param name string Token name
 --- @return Token
-local function t(content) return Symbol.get("<" .. content .. ">") or Token:new(content) end
+local function t(name) return Symbol("<" .. name .. ">") end
 
 --- Returns a new anonymous rule with the specified requirements
---- @param ... (Symbol | string)[] Rule requirements
+--- @param firstEntry Symbol First entry
+--- @param ... Symbol | string Remaining entries
 --- @return Rule
-local function r(...) return Rule:new(...) end
+local function r(firstEntry, ...) return Rule:new(firstEntry, ...) end
 
 -- Tokens
-local integer = Token:new("Integer", "%-?%d+")
-local float = Token:new("Float", "%-?%d+%.%d+")
-local name = Token:new("Name", "[%a_][%a%d_]*")
-local string = Token:new("String", "\"[%a%d_ ]*\"")
-local algebraOp = Token:new("AlgebraOp", "[%+%-%*/%%]", "%*%*")
-local conditionOp = Token:new("ConditionOp", "&&", "||", "%?%?")
-local logicOp = Token:new("LogicOp", "&", "|", "%^", "<<", ">>")
-local relationOp = Token:new("RelationOp", "[<>]", "<=", ">=", "==", "!=", "in", "!in")
-local keyword = Token:new("Keyword",
+local integer = Symbol("Integer", "%-?%d+")
+local float = Symbol("Float", "%-?%d+%.%d+")
+local name = Symbol("Name", "[%a_][%a%d_]*")
+local string = Symbol("String", "\"[%a%d_ ]*\"")
+local algebraOp = Symbol("AlgebraOp", "[%+%-%*/%%]", "%*%*")
+local conditionOp = Symbol("ConditionOp", "&&", "||", "%?%?")
+local logicOp = Symbol("LogicOp", "&", "|", "%^", "<<", ">>")
+local relationOp = Symbol("RelationOp", "[<>]", "<=", ">=", "==", "!=", "in", "!in")
+local keyword = Symbol("Keyword",
 	"true", "false", "nan", "infinity", "none",
 	"let", "fn", "for", "while", "switch",
 	"continue", "break", "return", "default"
 )
 
 -- Rules
-local stat = Rule:new("stat")
-local exp = Rule:new("exp")
-local assignable = Rule:new("assignable")
-local block = Rule:new("block")
-local perform = Rule:new("perform")
-local fn = Rule:new("fn")
+local stat = Symbol("stat")
+local exp = Symbol("exp")
+local assignable = Symbol("assignable")
+local block = Symbol("block")
+local perform = Symbol("perform")
+local fn = Symbol("fn")
 
-local unaryOp = Rule:new("unaryOp"
+local unaryOp = Symbol("unaryOp"
 	, t'!'
 	| t'~'
 	| t'++'
@@ -45,7 +45,7 @@ local unaryOp = Rule:new("unaryOp"
 	| t'-'
 )
 
-local binaryOp = Rule:new("binaryOp"
+local binaryOp = Symbol("binaryOp"
 	, algebraOp
 	| relationOp
 	| conditionOp
@@ -53,12 +53,12 @@ local binaryOp = Rule:new("binaryOp"
 	| t".."
 )
 
-local number = Rule:new("number"
+local number = Symbol("number"
 	, integer
 	| float
 )
 
-local constant = Rule:new("constant"
+local constant = Symbol("constant"
 	, number
 	| t"nan"
 	| t"infinity"
@@ -83,7 +83,7 @@ assignable:addRequirementSet(
 	| r(t"{", name, r(t",", name), '*', t"}") -- Object destructure
 )
 
-local ifElseStatement = Rule:new("ifElse")
+local ifElseStatement = Symbol("ifElse")
 ifElseStatement:addRequirementSet(t"if", exp, perform, r(t"else", perform | ifElseStatement), '?')
 
 stat:addRequirementSet(
@@ -108,7 +108,7 @@ perform:addRequirementSet(
 	| r(t"=>", exp | stat)
 )
 
-local signature = Rule:new("signature", t"(", r(name, r(t",", name), '*'), '?', t")")
+local signature = Symbol("signature", t"(", r(name, r(t",", name), '*'), '?', t")")
 fn:addRequirementSet(t"fn", name, signature, perform)
 
-local entry = Rule:new("entry", stat)
+local entry = Symbol("entry", stat)

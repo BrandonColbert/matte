@@ -1,36 +1,24 @@
-local Symbol = require "src.lang.symbols.symbol"
+local Symbol = require "lang.symbols.symbol"
 
---[[
-	Denotes sections of text as having specific meanings
-
-	name: string
-		Token name
-	patterns: string[]
-		Patterns used to classify text as this Token
-]]
+--- Represents a category which text may fall under.
+--- @class Token: Symbol
+--- @field name string Token name
+--- @field patterns string[] Patterns used to find matches
 local Token = {}
 Token.__index = Token
 setmetatable(Token, Symbol)
 
---[[
-	Creates and registers a named token.
-
-	name: string
-		Token name
-	...patterns: string[]
-		Should a string match any of the patterns, it may be classified as this Token
-
-	-OR-
-
-	Creates a token that matches the content directly. Should this token already be registered, it will return the existing one rather than creating a new one.
-
-	content: string
-		Should a string match this content, it may be classified as this Token
-
-]]
+--- Creates a new token with the specified name.
+---
+--- If patterns are specified, the text will be pattern matched.
+---
+--- If no patterns are specified, the text will be directly matched to the name
+--- @overload fun(name: string, ...: string): Token
+--- @overload fun(name: string): Token
+--- @return Token
 function Token:new(...)
-	local name, patterns
 	local args = {...}
+	local name, patterns
 
 	if #args == 1 then -- Direct
 		name = "<" .. args[1] .. ">"
@@ -49,45 +37,28 @@ function Token:new(...)
 	return o
 end
 
-function Token.__len(o)
+function Token:__tostring()
+	return Symbol.__tostring(self)
+end
+
+function Token:__len()
 	return 1
 end
 
+--- @param lhs Token
+--- @param rhs Symbol
+--- @return Rule
 function Token.__bor(lhs, rhs)
-	local Rule = require "src.lang.symbols.rule"
+	local Rule = require "lang.symbols.rule"
 
-	-- Coerce left side into rule
+	-- Coerce left side into rule from token
 	if type(lhs) == "table" and getmetatable(lhs) == Token then
 		lhs = Rule:new(lhs)
 	else
-		error(
-			"Left hand side must be a token: "
-			.. tostring(lhs) .. " | " .. tostring(rhs)
-		)
+		error(string.format("Left hand side must be a token: %s | %s", lhs, rhs))
 	end
 
-	-- Coerce right side into rule to use as alternative
-	if type(rhs) == "table" then
-		if getmetatable(rhs) == Token then
-			rhs = Rule:new(rhs)
-		elseif getmetatable(rhs) ~= Rule then
-			error(
-				"Right hand side must be a token or rule: "
-				.. tostring(lhs) .. " | " .. tostring(rhs)
-			)
-		end
-	else
-		error(
-			"Right hand side must be a table: "
-			.. tostring(lhs) .. " | " .. tostring(rhs)
-		)
-	end
-
-	return Rule.unify(lhs, rhs)
-end
-
-function Token.__tostring(o)
-	return Symbol.__tostring(o)
+	return Rule.__bor(lhs, rhs)
 end
 
 return Token

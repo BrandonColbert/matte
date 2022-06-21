@@ -88,7 +88,7 @@ async function generate(): Promise<void> {
 
 	// Add parser main file path
 	if("parser" in options) {
-		args.push(path.join("src", "main.lua"))
+		args.push("main.lua")
 		args.push("-parse")
 	} else
 		throw new Error("No parser directory specified")

@@ -1,152 +1,192 @@
---[[
-	Foundation for the tokens and rules that compose the language
+local list = require "utils.list"
 
-	static registry: {
-		rules: {[key: string]: Symbol},
-		tokens: {[key: string]: Symbol}
-	}
-		Symbol registry for rules and tokens mapped by name
-
-	name?: string
-		Symbol name
-]]
-local Symbol = {
-	registry = {
-		rules = {},
-		tokens = {},
-		names = {
-			rules = {},
-			tokens = {}
-		}
-	}
-}
-
+--- Foundation for the tokens and rules that compose the language
+--- @class Symbol
+--- @field name? string Symbol name
+local Symbol = {}
 Symbol.__index = Symbol
 
---[[
-	name?: string
-		Symbol name
-]]
+--- @param name? string Symbol name
+--- @return Symbol
 function Symbol:new(name)
-	local o = {name = name}
+	local o = {name=name}
 	setmetatable(o, self)
-
-	if name ~= nil then -- Named symbol
-		if Symbol.isPatternTokenName(name)  then -- Token name
-			if self.registry.tokens[name] ~= nil then
-				error("Token '" .. name .. "' already exists")
-			end
-
-			self.registry.tokens[name] = o
-			table.insert(self.registry.names.tokens, name)
-		elseif Symbol.isDirectTokenName(name) then -- Direct token name
-			if self.registry.tokens[name] ~= nil then
-				error("Token '" .. name .. "' already exists")
-			end
-
-			self.registry.tokens[name] = o
-			table.insert(self.registry.names.tokens, name)
-		elseif name:match("^%l%a*$") then -- Rule name
-			if self.registry.rules[name] ~= nil then
-				error("Rule '" .. name .. "' already exists")
-			end
-
-			self.registry.rules[name] = o
-			table.insert(self.registry.names.rules, name)
-		else
-			error("Invalid symbol name '" .. name .. "'")
-		end
-	end
 
 	return o
 end
 
---[[
-	name: string
-		Symbol name
-
-	Returns the symbol instance with the associated name
-]]
-function Symbol.get(name)
-	if Symbol.isTokenName(name) then -- Token name
-		return Symbol.registry.tokens[name]
-	elseif Symbol.isRuleName(name) then -- Rule name
-		return Symbol.registry.rules[name]
-	else
-		return nil
-	end
-end
-
-function Symbol.isDirectTokenName(name)
-	return name:match("<[%w%p]+>")
-end
-
-function Symbol.isPatternTokenName(name)
-	return name:match("^%u%a*$")
-end
-
-function Symbol.isTokenName(name)
-	return Symbol.isDirectTokenName(name) or Symbol.isPatternTokenName(name)
-end
-
-function Symbol.isRuleName(name)
-	return name:match("^%l%a*$")
-end
-
---[[
-	Returns an iterator for tokens in insertion order
-]]
-function Symbol.getTokens()
-	local i = 0
-	local length = #Symbol.registry.names.tokens
-
-	return function()
-		i = i + 1
-
-		if i <= length then
-			local name = Symbol.registry.names.tokens[i]
-			local symbol = Symbol.registry.tokens[name]
-
-			return symbol
-		end
-	end
-end
-
---[[
-	Returns an iterator for rules in insertion order
-]]
-function Symbol.getRules()
-	local i = 0
-	local length = #Symbol.registry.names.rules
-
-	return function()
-		i = i + 1
-
-		if i <= length then
-			local name = Symbol.registry.names.rules[i]
-			local symbol = Symbol.registry.rules[name]
-
-			return symbol
-		end
-	end
-end
-
--- Number of requirements
-function Symbol.__len(o)
+-- Returns the number of requirements
+--- @return number
+function Symbol:__len()
 	return 0
 end
 
--- Combines the symbols into a rule union
+--- Combines both symbol's requirements into a new anonymous rule
+--- @param lhs Symbol
+--- @param rhs Symbol
+--- @return Rule
 function Symbol.__bor(lhs, rhs)
 	return nil
 end
 
-function Symbol.__tostring(o)
-	if o.name then
-		return o.name
-	end
+function Symbol:__tostring()
+	return self.name
+end
 
-	return nil
+--- @class Metatable
+local Metatable = {}
+setmetatable(Symbol, Metatable)
+
+--- Returns the registered symbol with the corresponding name if it exists.
+--- If the symbol does not exist, it will be defined using the given parameters and registered under the specified name.
+--- @overload fun(name: string): Symbol
+--- @overload fun(name: string, ...: string): Token
+--- @overload fun(name: string, firstEntry?: Symbol, ...: Symbol | string): Rule
+--- @param name string Symbol name
+--- @return Symbol
+function Metatable:__call(name, ...)
+	local Token = require "lang.symbols.token"
+	local Rule = require "lang.symbols.rule"
+
+	if Symbol.Name.isToken(name) then -- Token symbol
+		--- @type Token
+		local token = Symbol.Registry.tokens[name]
+
+		-- If token does not exist, create and register it
+		if not token then
+			if Symbol.Name.isPatternToken(name) then
+				token = Token:new(name, ...)
+			elseif Symbol.Name.isDirectToken(name) then
+				name = name:match(Symbol.Name.patterns.token.direct)
+				token = Token:new(name)
+			end
+
+			Symbol.Registry.register(token)
+		end
+
+		return token
+	elseif Symbol.Name.isRule(name) then -- Rule symbol
+		--- @type Rule
+		local rule = Symbol.Registry.rules[name]
+
+		-- If rule does not exist, create and register it
+		if not rule then
+			rule = Rule:new(name, ...)
+			Symbol.Registry.register(rule)
+		end
+
+		return rule
+	else
+		error(string.format("Invalid symbol name '%s'", name))
+	end
+end
+
+--- Symbol registry for rules and tokens mapped by name
+--- @class Symbol.Registry
+--- @field rules table<string, Rule>
+--- @field tokens table<string, Token>
+--- @field names {rules: string[], tokens: string[]}
+local Registry = {
+	rules = {},
+	tokens = {},
+	names = {
+		rules = {},
+		tokens = {}
+	}
+}
+
+Symbol.Registry = Registry
+Symbol.Registry.__index = Symbol.Registry
+
+--- Registers a new rule or token
+--- @param symbol Symbol Symbol to register
+function Symbol.Registry.register(symbol)
+	local Token = require "lang.symbols.token"
+	local Rule = require "lang.symbols.rule"
+
+	if symbol.name then
+		if getmetatable(symbol) == Token then
+			if Symbol.Registry.tokens[symbol.name] ~= nil then
+				error(string.format("Token '%s' already exists", symbol.name))
+			end
+	
+			Symbol.Registry.tokens[symbol.name] = symbol
+			table.insert(Symbol.Registry.names.tokens, symbol.name)
+		elseif getmetatable(symbol) == Rule then
+			if Symbol.Registry.rules[symbol.name] ~= nil then
+				error(string.format("Rule '%s' already exists", symbol.name))
+			end
+	
+			Symbol.Registry.rules[symbol.name] = symbol
+			table.insert(Symbol.Registry.names.rules, symbol.name)
+		else
+			error("Only Token or Rule symbols may be registered.")
+		end
+	else
+		error("Unable to register anonymous symbol.")
+	end
+end
+
+--- Returns all token symbols in registration order
+--- @return Token[]
+function Symbol.Registry.getTokens()
+	return list(Symbol.Registry.names.tokens)
+		:map(function(name)
+			return Symbol.Registry.tokens[name]
+		end)
+		:table()
+end
+
+--- Returns all rule symbols in registration order
+--- @return Rule[]
+function Symbol.Registry.getRules()
+	return list(Symbol.Registry.names.rules)
+		:map(function(name)
+			return Symbol.Registry.rules[name]
+		end)
+		:table()
+end
+
+--- @class Symbol.Name
+local Name = {
+	patterns = {
+		token = {
+			direct = "^<([%w%p]+)>$",
+			pattern = "^(%u%a*)$"
+		},
+		rule = "^(%l%a*)$"
+	}
+}
+
+Symbol.Name = Name
+Symbol.Name.__index = Symbol.Name
+
+--- Returns whether the symbol name corresponds to a token using direct matches
+--- @param name string Symbol name
+--- @return string
+function Symbol.Name.isDirectToken(name)
+	return name:match(Symbol.Name.patterns.token.direct)
+end
+
+--- Returns whether the symbol name corresponds to a token using pattern matches
+--- @param name string Symbol name
+--- @return string
+function Symbol.Name.isPatternToken(name)
+	return name:match(Symbol.Name.patterns.token.pattern)
+end
+
+--- Returns whether the symbol name corresponds to a token
+--- @param name string Symbol name
+--- @return string
+function Symbol.Name.isToken(name)
+	return Symbol.Name.isDirectToken(name) or Symbol.Name.isPatternToken(name)
+end
+
+--- Returns whether the symbol name corresponds to a rule
+--- @param name string Symbol name
+--- @return string
+function Symbol.Name.isRule(name)
+	return name:match(Symbol.Name.patterns.rule)
 end
 
 return Symbol

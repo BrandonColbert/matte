@@ -1,7 +1,7 @@
-local Token = require "src.lang.symbols.token"
-local Rule = require "src.lang.symbols.rule"
-local TokenNode = require "src.lang.nodes.tokenNode"
-local RuleNode = require "src.lang.nodes.ruleNode"
+local Token = require "lang.symbols.token"
+local Rule = require "lang.symbols.rule"
+local TokenNode = require "lang.nodes.tokenNode"
+local RuleNode = require "lang.nodes.ruleNode"
 
 --- @class Parser
 --- @field root Node Syntax tree root node
@@ -9,6 +9,7 @@ local Parser = {}
 Parser.__index = Parser
 
 --- @param entry Symbol Entry point
+--- @return Parser
 function Parser:new(entry)
 	local o = {}
 
