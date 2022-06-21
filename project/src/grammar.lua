@@ -22,8 +22,10 @@ local conditionOp = Symbol("ConditionOp", "&&", "||", "%?%?")
 local logicOp = Symbol("LogicOp", "&", "|", "%^", "<<", ">>")
 local relationOp = Symbol("RelationOp", "[<>]", "<=", ">=", "==", "!=", "in", "!in")
 local keyword = Symbol("Keyword",
-	"true", "false", "nan", "infinity", "none",
-	"let", "fn", "for", "while", "switch",
+	"true", "false", "nan", "infinity", "none", "any",
+	"let", "fn",
+	"new", "as",
+	"for", "while", "switch",
 	"continue", "break", "return", "default"
 )
 
@@ -34,15 +36,17 @@ local assignable = Symbol("assignable")
 local block = Symbol("block")
 local perform = Symbol("perform")
 local fn = Symbol("fn")
+local ifElseStatement = Symbol("ifElse")
+local rtype = Symbol("type")
 
 local unaryOp = Symbol("unaryOp"
-	, t'!'
-	| t'~'
-	| t'++'
-	| t'--'
-	| t'...'
-	| t'+'
-	| t'-'
+	, t"!"
+	| t"~"
+	| t"++" -- Increment
+	| t"--" -- Decrement
+	| t"..." -- Spread
+	| t"+"
+	| t"-"
 )
 
 local binaryOp = Symbol("binaryOp"
@@ -50,7 +54,7 @@ local binaryOp = Symbol("binaryOp"
 	| relationOp
 	| conditionOp
 	| logicOp
-	| t".."
+	| t".." -- Range
 )
 
 local number = Symbol("number"
@@ -68,26 +72,45 @@ local constant = Symbol("constant"
 	| t"none"
 )
 
+local entry = Symbol("entry", stat, '*')
+local arguments = Symbol("arguments", exp, r(t",", exp), '*')
+local typedName = Symbol("typedName", name, r(t":", rtype), '?')
+local names = Symbol("names", typedName, r(t",", typedName), '*')
+local signature = Symbol("signature", t"(", names, '?', t")", r(t":", rtype), '?')
+
+rtype:addRequirementSet(
+	name
+	| t"any"
+	| t"none"
+	| r(rtype, t"[]") -- Array of type
+)
+
 exp:addRequirementSet(
 	constant
 	| name
 	| r(exp, binaryOp, exp)
 	| r(unaryOp, exp)
-	| r(t"(", exp, t")")
-	| r(t"[", r(exp, r(t",", exp), '*'), '?', t"]") -- Array creation
+	| r(t"(", exp, t")") -- Grouping
+	| t"[]" | r(t"[", arguments, '?', t"]") -- Array creation
+	| r(exp, t"(", arguments, '?', t")") -- Function call
+	| r(exp, t".", name) -- Member access
+	| r(exp, t"[", exp, t"]") -- Indexer access
+	| r(exp, t"if", exp, t"else", exp) -- Ternary
+	| r(t"new", exp) -- Instantiation
+	| r(signature, t"=>", stat) -- Lambda (anonymous function)
 )
 
 assignable:addRequirementSet(
-	name
-	| r(t"[", name, r(t",", name), '*', t"]") -- Array destructure
-	| r(t"{", name, r(t",", name), '*', t"}") -- Object destructure
+	typedName
+	| r(t"[", names, t"]") -- Array destructure
+	| r(t"{", names, t"}") -- Object destructure
 )
 
-local ifElseStatement = Symbol("ifElse")
 ifElseStatement:addRequirementSet(t"if", exp, perform, r(t"else", perform | ifElseStatement), '?')
 
 stat:addRequirementSet(
 	block
+	| exp
 	| fn
 	| r(t"let", assignable, t"=", exp) -- Declaration
 	| r(assignable, algebraOp | logicOp | conditionOp, '?', t"=", exp) -- Assignment
@@ -105,10 +128,7 @@ block:addRequirementSet(
 
 perform:addRequirementSet(
 	block
-	| r(t"=>", exp | stat)
+	| r(t"=>", stat)
 )
 
-local signature = Symbol("signature", t"(", r(name, r(t",", name), '*'), '?', t")")
 fn:addRequirementSet(t"fn", name, signature, perform)
-
-local entry = Symbol("entry", stat)

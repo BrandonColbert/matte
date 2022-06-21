@@ -3,6 +3,7 @@ local list = require "utils.list"
 --- Foundation for the tokens and rules that compose the language
 --- @class Symbol
 --- @field name? string Symbol name
+--- @type fun(name: string, ...: Symbol | string): Token | Rule
 local Symbol = {}
 Symbol.__index = Symbol
 
@@ -39,11 +40,11 @@ setmetatable(Symbol, Metatable)
 
 --- Returns the registered symbol with the corresponding name if it exists.
 --- If the symbol does not exist, it will be defined using the given parameters and registered under the specified name.
---- @overload fun(name: string): Symbol
+--- @overload fun(name: string): Token | Rule
 --- @overload fun(name: string, ...: string): Token
 --- @overload fun(name: string, firstEntry?: Symbol, ...: Symbol | string): Rule
 --- @param name string Symbol name
---- @return Symbol
+--- @return Token | Rule
 function Metatable:__call(name, ...)
 	local Token = require "lang.symbols.token"
 	local Rule = require "lang.symbols.rule"
