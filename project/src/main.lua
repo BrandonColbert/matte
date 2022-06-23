@@ -10,7 +10,7 @@ local options = list(arg):reduce(function(o, entry)
 		o[key] = true
 	else
 		-- Key-value argument
-		local key, value = entry:match("^-(%w+)=(.+)$")
+		local key, value = entry:match("^-(%w+)=(.*)$")
 
 		if key and value then
 			o[key] = value
