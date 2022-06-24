@@ -91,7 +91,8 @@ exp:addRequirementSet(
 	| r(exp, binaryOp, exp)
 	| r(unaryOp, exp)
 	| r(t"(", exp, t")") -- Grouping
-	| t"[]" | r(t"[", arguments, '?', t"]") -- Array creation
+	| t"[]" -- Empty array creation
+	| r(t"[", arguments, '?', t"]") -- Array creation
 	| r(exp, t"(", arguments, '?', t")") -- Function call
 	| r(exp, t".", name) -- Member access
 	| r(exp, t"[", exp, t"]") -- Indexer access

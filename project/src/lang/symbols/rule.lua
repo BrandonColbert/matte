@@ -157,6 +157,12 @@ function Rule.Requirement:new(symbol, quantifier)
 	return o
 end
 
+--- Returns whether the requirement may be complete with 0 nodes
+--- @return boolean
+function Rule.Requirement:isOptional()
+	return self.quantifier == '?' or self.quantifier == '+'
+end
+
 function Rule.Requirement:__tostring()
 	if #self.quantifier > 0 and #self.symbol.rsets > 1 then
 		return string.format("(%s)%s", self.symbol, self.quantifier)

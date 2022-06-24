@@ -8,6 +8,7 @@ local list = require "utils.list"
 --- @class RuleNode: Node
 --- @field symbol Rule Rule being realized
 --- @field branches table<number, Node[][]> Each branch consists of a key that is the associated requirement set index and a value that is a list of entries where each entry is a homogeneous list of nodes that fulfills the corresponding requirement.
+--- @field meta Node Self referential node for left recursive rules
 local RuleNode = {}
 RuleNode.__index = RuleNode
 setmetatable(RuleNode, Node)
@@ -22,30 +23,71 @@ function RuleNode:new(rule, depth)
 
 	-- Create a branch for each requirement set
 	for i = 1, #rule.rsets do
-		o.branches[i] = {}
+		local entries = {}
+		o.branches[i] = entries
+
+		-- If the set's first requirement is the same as the rule, the set is recursive
+		local requirement = rule.rsets[i].requirements[1]
+
+		if requirement.symbol == rule then
+			if requirement:isOptional() then
+				error("First requirement of a left recursive rule may not be optional.")
+			end
+
+			-- Prepare set for recursion
+			local entry = {o}
+			table.insert(entries, entry)
+		end
 	end
 
 	return o
 end
 
---- @return Lexer.Section[]
-function RuleNode:getTokens()
-	local _, branch = next(self.branches)
-
-	-- Get tokens from the first encountered branch
-	if branch then
-		local tokens = {}
-
-		-- Conglomerate tokens from each child node
-		for i = 1, #branch do
-			for j = 1, #branch[i] do
-				for subtoken in list(branch[i][j]:getTokens()):values() do
-					table.insert(tokens, subtokens)
+--- Adjust depth for this node and every child
+--- @param delta number
+function RuleNode:adjustDepth(delta)
+	-- Adjust depth for children
+	for _, entries in pairs(self.branches) do
+		for entry in list(entries):values() do
+			for node in list(entry):values() do
+				if node ~= self then
+					node:adjustDepth(delta)
 				end
 			end
 		end
+	end
 
-		return tokens
+	-- Adjust own depth
+	Node.adjustDepth(self, delta)
+end
+
+--- @return Lexer.Section[]
+function RuleNode:getTokens()
+	-- Meta override
+	if self.meta and self.meta ~= self then
+		return self.meta:getTokens()
+	end
+
+	-- Get tokens from the first encountered branch
+	for i, entries in pairs(self.branches) do
+		if not (
+			#entries == 1
+			and #entries[1] == 1
+			and entries[1][1] == self
+		) then
+			local tokens = {}
+
+			-- Conglomerate tokens from each child node
+			for entry in list(entries):values() do
+				for node in list(entry):values() do
+					for subtoken in list(node:getTokens()):values() do
+						table.insert(tokens, subtokens)
+					end
+				end
+			end
+	
+			return tokens
+		end
 	end
 
 	return Node.getTokens(self)
@@ -55,6 +97,15 @@ end
 function RuleNode:clone()
 	local clone = RuleNode:new(self.symbol, self.depth)
 	clone.branches = {}
+
+	-- Create meta branch
+	if self.meta then
+		if self.meta == self then
+			clone.meta = clone
+		else
+			clone.meta = self.meta:clone()
+		end
+	end
 
 	-- Create and assign copies of each branch
 	for i, entries in pairs(self.branches) do
@@ -83,7 +134,26 @@ end
 
 --- @return string
 function RuleNode:__tostring()
+	--- @param node Node
+	--- @return string
+	local function nts(node)
+		if node == self then
+			return [["self"]]
+		else
+			return tostring(node)
+		end
+	end
+
 	local textBranches = {}
+
+	-- Convert meta node into a string for branch 0
+	if self.meta then
+		table.insert(textBranches, string.format(
+			[=["0":{"reqs":"%s","entries":[[%s]]}]=],
+			self.meta.symbol,
+			nts(self.meta)
+		))
+	end
 
 	-- Convert branches into strings
 	for index, entries in pairs(self.branches) do
@@ -94,14 +164,8 @@ function RuleNode:__tostring()
 			table.concat(list(entries)
 				:map(function(entry) -- Convert entries into strings
 					return string.format("[%s]", table.concat(list(entry)
-							:map(function(node) -- Convert nodes into strings
-								if node == self then
-									return [["self"]]
-								else
-									return tostring(node)
-								end
-							end)
-							:table(),
+						:map(nts) -- Convert nodes into strings
+						:table(),
 					","))
 				end)
 				:table(),
@@ -128,19 +192,16 @@ function RuleNode:complete(branchIndex, requirementIndex)
 			local requirement = rset.requirements[requirementIndex]
 			local entry = entries[requirementIndex]
 
+			-- The entry must be present even if it accepts 0 instances
 			if not entry then
 				return false
-			else
-				if list(entry):some(function(node) return node == self end) then
-					return false
-				end
 			end
 
 			if #requirement.quantifier == 0 then
 				if #entry == 0 then -- Empty quantifier requires one entry
 					return false
 				elseif #entry == 1 then -- Ensure the entry is complete
-					if not entry[1]:complete() then
+					if entry[1] == self or not entry[1]:complete() then
 						return false
 					end
 				else
@@ -148,7 +209,7 @@ function RuleNode:complete(branchIndex, requirementIndex)
 				end
 			elseif requirement.quantifier == "?" then
 				if #entry == 1 then -- If an entry exists, ensure it is complete
-					if not entry[1]:complete() then
+					if entry[1] == self or not entry[1]:complete() then
 						return false
 					end
 				elseif #entry > 1 then
@@ -159,14 +220,14 @@ function RuleNode:complete(branchIndex, requirementIndex)
 					return false
 				else -- Ensure all entries are complete
 					for j = 1, #entry do
-						if not entry[j]:complete() then
+						if entry[j] == self or not entry[j]:complete() then
 							return false
 						end
 					end
 				end
 			elseif requirement.quantifier == "*" then
 				for j = 1, #entry do -- Ensure all entries are complete
-					if not entry[j]:complete() then
+					if entry[j] == self or not entry[j]:complete() then
 						return false
 					end
 				end
@@ -184,6 +245,11 @@ function RuleNode:complete(branchIndex, requirementIndex)
 			return true
 		end
 	else
+		-- Meta override
+		if self.meta and self.meta ~= self then
+			return self.meta:complete()
+		end
+
 		-- Return true if at least one branch is complete
 		for i in pairs(self.branches) do
 			if self:complete(i) then
@@ -231,12 +297,8 @@ function RuleNode:integrate(token, branchIndex, entryIndex, nodeIndex)
 					if
 						entryIndex == 1
 						and nodeIndex == 1
-						and node.symbol == self.symbol
+						and node == self
 					then
-						if not entry[nodeIndex] then
-							entry[nodeIndex] = self
-						end
-
 						return false
 					end
 
@@ -311,23 +373,50 @@ function RuleNode:integrate(token, branchIndex, entryIndex, nodeIndex)
 				end
 			end
 
-			if #indices.valid == 0 then
-				local anyComplete = list(indices.invalid):some(function(branchIndex)
-					return self:complete(branchIndex)
-				end)
+			-- Since all branches except recursive ones were invalidated, attempt to solve recursion
+			if #indices.valid == 0 and #indices.recursive > 0 then
+				-- Integrate the token into the existing meta branch if possible
+				local success = self.meta and self.meta:integrate(token)
 
-				-- Since there are no valid branches but at least one invalid branch was complete, recursion may be broken and integration re-attempted
-				if anyComplete then
-					for v in list(indices.recursive):values() do
-						-- Break out of left recursion using a clone of the current node
-						self.branches[v][1][1] = self:clone()
+				-- Recreate the meta branch since the current one no longer works
+				if not success then
+					local node = self:clone()
+					node:integrate()
 
-						-- Attempt to re-integrate the token
-						if self:integrate(token, v) then
-							table.insert(indices.valid, v)
-						else
-							table.insert(indices.invalid, v)
+					-- Meta branch may only be created if this node is complete
+					if node:complete() then
+						-- Create the meta branch
+						local meta = self:clone()
+						meta.meta = node
+	
+						for v in list(indices.invalid):values() do
+							meta.branches[v] = nil
 						end
+	
+						for v in list(indices.recursive):values() do
+							meta.branches[v][1][1] = node:clone()
+						end
+	
+						-- Try new meta branch integration
+						if meta:integrate(token) then
+							-- If integration worked, the meta branch is saved
+							success = true
+							meta.meta = nil
+							self.meta = meta
+						else
+							-- If not, further recursion is impossible and the meta branch must be actualized
+							success = false
+							self.branches = meta.meta.branches
+						end
+					end
+				end
+
+				-- Evaluate the validity of the recursive based on success of the meta branch
+				for v in list(indices.recursive):values() do
+					if success then
+						table.insert(indices.valid, v)
+					else
+						table.insert(indices.invalid, v)
 					end
 				end
 			end
@@ -342,6 +431,15 @@ function RuleNode:integrate(token, branchIndex, entryIndex, nodeIndex)
 			end
 		end
 	else
+		-- Meta override
+		if self.meta then
+			local result = self.meta:integrate()
+			self.branches = self.meta.branches
+			self.meta = nil
+
+			return result
+		end
+
 		-- Remove incomplete branches when no token is specified
 		if self:complete() then
 			local incomplete = {}

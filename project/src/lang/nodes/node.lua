@@ -59,6 +59,12 @@ function Node:log(...)
 	))
 end
 
+--- Adjust depth for this node and every child
+--- @param delta number
+function Node:adjustDepth(delta)
+	self.depth = self.depth + delta
+end
+
 --- Returns the number of integrated tokens
 --- @return number
 function Node:__len()
