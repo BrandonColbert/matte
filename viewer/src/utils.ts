@@ -102,18 +102,3 @@ export function getContentType(file: string): string {
 		default: return "text/plain"
 	}
 }
-
-/**
- * @returns Key-value mapped CLI parameters
- */
-export function getOptions(): {[key: string]: string} {
-	// Find key-value pairs in the form "-{key}={value}"
-	return Object.fromEntries(process.argv.slice(2).map(arg => {
-		if(!arg.startsWith("-"))
-			return null
-
-		let [key, value] = arg.slice(1).split("=", 2)
-
-		return [key, value]
-	}).filter(v => v != null))
-}

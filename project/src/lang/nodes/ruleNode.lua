@@ -2,6 +2,7 @@ local Node = require "lang.nodes.node"
 local TokenNode = require "lang.nodes.tokenNode"
 local Rule = require "lang.symbols.rule"
 local Token = require "lang.symbols.token"
+local Escape = require "utils.escape"
 local list = require "utils.list"
 
 --- A node correlated with a particular rule
@@ -150,7 +151,7 @@ function RuleNode:__tostring()
 	if self.meta then
 		table.insert(textBranches, string.format(
 			[=["0":{"reqs":"%s","entries":[[%s]]}]=],
-			self.meta.symbol,
+			Escape.json(tostring(self.meta.symbol)),
 			nts(self.meta)
 		))
 	end
@@ -160,7 +161,7 @@ function RuleNode:__tostring()
 		table.insert(textBranches, string.format(
 			[=["%d":{"reqs":"%s","entries":[%s]}]=],
 			index,
-			self.symbol.rsets[index],
+			Escape.json(tostring(self.symbol.rsets[index])),
 			table.concat(list(entries)
 				:map(function(entry) -- Convert entries into strings
 					return string.format("[%s]", table.concat(list(entry)
@@ -175,7 +176,7 @@ function RuleNode:__tostring()
 
 	return string.format(
 		[[{"symbol":"%s","branches":{%s}}]],
-		self.symbol,
+		Escape.pattern(tostring(self.symbol)),
 		table.concat(textBranches, ",")
 	)
 end

@@ -1,4 +1,5 @@
 local Descent = require "descent"
+local Escape = require "utils.escape"
 local list = require "utils.list"
 
 -- Acquire command line arguments
@@ -23,10 +24,7 @@ local options = list(arg):reduce(function(o, entry)
 end, {})
 
 -- Get source code with correct formatting
-local src = (options["src"] or "")
-	:gsub("\\r\\n", "\n")
-	:gsub("\\n", "\n")
-	:gsub("\\t", "\t")
+local src = Escape.cli(options["src"] or "")
 
 if options["parse"] then
 	local entry = options["entry"]

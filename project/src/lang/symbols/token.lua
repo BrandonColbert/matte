@@ -1,4 +1,5 @@
 local Symbol = require "lang.symbols.symbol"
+local Escape = require "utils.escape"
 
 --- Represents a category which text may fall under.
 --- @class Token: Symbol
@@ -23,7 +24,7 @@ function Token:new(...)
 	if #args == 1 then -- Direct
 		name = "<" .. args[1] .. ">"
 
-		local escapedPattern = args[1]:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
+		local escapedPattern = Escape.pattern(args[1])
 		patterns = {escapedPattern}
 	else -- Pattern
 		name = table.remove(args, 1)

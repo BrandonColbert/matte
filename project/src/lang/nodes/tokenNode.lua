@@ -1,4 +1,5 @@
 local Node = require "lang.nodes.node"
+local Escape = require "utils.escape"
 
 --- A node correlated with a particular token
 --- @class TokenNode: Node
@@ -74,8 +75,8 @@ function TokenNode:__tostring()
 	if self.token then
 		return string.format(
 			[[{"symbol":"%s","value":"%s"}]],
-			tostring(self.symbol),
-			tostring(self.token.text)
+			Escape.json(tostring(self.symbol)),
+			Escape.json(self.token.text)
 		)
 	end
 

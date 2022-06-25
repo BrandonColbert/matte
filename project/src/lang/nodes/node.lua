@@ -1,5 +1,6 @@
 local Rule = require "lang.symbols.rule"
 local Token = require "lang.symbols.token"
+local Escape = require "utils.escape"
 
 --- Basic building block of a syntax tree
 --- @class Node
@@ -76,7 +77,7 @@ end
 function Node:__tostring()
 	return string.format(
 		[[{"symbol":"%s"}]],
-		tostring(self.symbol)
+		Escape.json(tostring(self.symbol))
 	)
 end
 

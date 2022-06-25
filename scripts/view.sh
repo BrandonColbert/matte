@@ -3,5 +3,5 @@ node viewer \
 	-lua=lua5.4 \
 	-parser=project/src \
 	-watch \
-	-ast -display -log \
+	-display -log \
 	-srcPath="examples/test.dt"

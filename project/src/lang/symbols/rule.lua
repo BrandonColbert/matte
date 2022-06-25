@@ -164,7 +164,11 @@ function Rule.Requirement:isOptional()
 end
 
 function Rule.Requirement:__tostring()
-	if #self.quantifier > 0 and #self.symbol.rsets > 1 then
+	if
+		#self.quantifier > 0
+		and getmetatable(self.symbol) == Rule
+		and #self.symbol.rsets > 1
+	then
 		return string.format("(%s)%s", self.symbol, self.quantifier)
 	end
 

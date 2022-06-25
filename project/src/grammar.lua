@@ -16,7 +16,7 @@ local function r(firstEntry, ...) return Rule:new(firstEntry, ...) end
 local integer = Symbol("Integer", "%-?%d+")
 local float = Symbol("Float", "%-?%d+%.%d+")
 local name = Symbol("Name", "[%a_][%a%d_]*")
-local string = Symbol("String", "\"[%a%d_ ]*\"")
+local string = Symbol("String", "\".-[^\\]\"")
 local algebraOp = Symbol("AlgebraOp", "[%+%-%*/%%]", "%*%*")
 local conditionOp = Symbol("ConditionOp", "&&", "||", "%?%?")
 local logicOp = Symbol("LogicOp", "&", "|", "%^", "<<", ">>")
@@ -26,7 +26,8 @@ local keyword = Symbol("Keyword",
 	"let", "fn",
 	"new", "as",
 	"for", "while", "switch",
-	"continue", "break", "return", "default"
+	"continue", "break", "return", "default",
+	"from", "import"
 )
 
 -- Rules
@@ -38,6 +39,7 @@ local perform = Symbol("perform")
 local fn = Symbol("fn")
 local ifElseStatement = Symbol("ifElse")
 local rtype = Symbol("type")
+local import = Symbol("import")
 
 local unaryOp = Symbol("unaryOp"
 	, t"!"
@@ -72,7 +74,7 @@ local constant = Symbol("constant"
 	| t"none"
 )
 
-local entry = Symbol("entry", stat, '*')
+local entry = Symbol("entry", import, '*', stat, '*')
 local arguments = Symbol("arguments", exp, r(t",", exp), '*')
 local typedName = Symbol("typedName", name, r(t":", rtype), '?')
 local names = Symbol("names", typedName, r(t",", typedName), '*')
@@ -133,3 +135,11 @@ perform:addRequirementSet(
 )
 
 fn:addRequirementSet(t"fn", name, signature, perform)
+
+local importItem = Symbol("importItem", name, r(t"as", name), '?')
+local importItems = Symbol("importItems", importItem, r(t",", importItem), '*')
+
+import:addRequirementSet(
+	r(t"from", string, t"import", importItems)
+	| r(t"from", name, t"import", importItems)
+)
