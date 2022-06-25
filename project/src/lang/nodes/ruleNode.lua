@@ -176,7 +176,7 @@ function RuleNode:__tostring()
 
 	return string.format(
 		[[{"symbol":"%s","branches":{%s}}]],
-		Escape.pattern(tostring(self.symbol)),
+		Escape.json(tostring(self.symbol)),
 		table.concat(textBranches, ",")
 	)
 end
