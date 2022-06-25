@@ -1,5 +1,6 @@
 import fs from "fs/promises"
 import Options from "./options.js"
+import {stdout} from "process"
 import * as childProcess from "child_process"
 
 export class Parser {
@@ -43,6 +44,7 @@ export class Parser {
 			let text = data.toString()
 			let src = text.trim()
 
+			// Retry if file could not be read
 			if(!text) {
 				let stats = await fs.stat(Options.get("srcPath"))
 
@@ -56,23 +58,28 @@ export class Parser {
 		}
 
 		// Run the parser in its directory
-		let output = ""
+		let [line, errText] = ["", ""]
 		let process = childProcess.spawn(Options.get("lua"), args, {
 			cwd: Options.get("parser"),
 			timeout: 5000
 		})
 
-		process.stderr.on("data", (chunk: Buffer) => {
-			if(Options.has("log"))
-				console.log(chunk.toString())
-		})
+		process.stderr.on("data", (chunk: Buffer) => errText += chunk.toString())
 
 		process.stdout.on("data", (chunk: Buffer) => {
-			let line = chunk.toString()
-			output += line
+			let data = line + chunk.toString()
+			let lines = data.split(/\r?\n/)
 
+			let lastLineIndex = lines.length - 1 - lines.slice().reverse().findIndex(line => Boolean(line))
+			let head = lines.slice(0, lastLineIndex).join("\n")
+			let tail = lines.slice(lastLineIndex).join("\n")
+
+			// Keep the last non-empty line
+			line = tail
+
+			// Print every line up to but excluding the last non-empty line
 			if(Options.has("log"))
-				console.log(line)
+				stdout.write(head)
 		})
 
 		await new Promise<void>((resolve, reject) => {
@@ -80,12 +87,17 @@ export class Parser {
 			process.on("error", code => reject(code))
 		})
 
-		let lines = output.trim().split(/\r?\n/)
-		let line = lines.at(-1)
+		if(Options.has("log"))
+			console.log()
+
+		if(errText) {
+			console.error(errText)
+			return null
+		}
 
 		try {
 			// Convert last line of parser output to JSON ast
-			return JSON.parse(line)
+			return JSON.parse(line.trim())
 		} catch(e) {
 			console.log(`Last line of output is not valid JSON:\n\t${line}`)
 			return null

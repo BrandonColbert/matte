@@ -51,8 +51,6 @@ end
 --- @return boolean
 function TokenNode:integrate(token)
 	if token then
-		self:log(string.format("%s <- %s", self.symbol, token))
-
 		-- If no token already exists and the token is applicable, use it
 		if not self:complete() and token:is(self.symbol) then
 			self.token = token

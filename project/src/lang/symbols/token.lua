@@ -5,6 +5,7 @@ local Escape = require "utils.escape"
 --- @class Token: Symbol
 --- @field name string Token name
 --- @field patterns string[] Patterns used to find matches
+--- @field comment boolean Whether this token should be ignored by the parser
 local Token = {}
 Token.__index = Token
 setmetatable(Token, Symbol)
@@ -33,9 +34,18 @@ function Token:new(...)
 
 	local o = Symbol:new(name)
 	o.patterns = patterns
+	o.comment = false
 	setmetatable(o, self)
 
 	return o
+end
+
+--- Sets the comment option for this token and returns itself
+--- @param state boolean
+--- @return Token
+function Token:setComment(state)
+	self.comment = state
+	return self
 end
 
 function Token:__tostring()

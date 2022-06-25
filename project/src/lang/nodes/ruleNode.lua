@@ -351,7 +351,7 @@ function RuleNode:integrate(token, branchIndex, entryIndex, nodeIndex)
 				end
 			end
 		else
-			self:log(tostring(self.symbol) .. " <- " .. tostring(token))
+			self:log(string.format("%s <- %s", self.symbol, token))
 
 			local indices = {
 				valid = {},

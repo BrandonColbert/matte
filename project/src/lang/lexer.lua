@@ -4,13 +4,18 @@ local list = require "utils.list"
 --- Acquires tokens from source code.
 --- @class Lexer
 --- @field content string Remaining characters to be tokenized
+--- @field wss boolean Whether to be WhiteSpace Sensitive
 local Lexer = {}
 Lexer.__index = Lexer
 
 --- @param src string Source code to convert into tokens
 --- @return Lexer
 function Lexer:new(src)
-	local o = {content=src}
+	local o = {
+		content = src,
+		wss = false
+	}
+
 	setmetatable(o, self)
 
 	return o
@@ -19,9 +24,12 @@ end
 --- Returns the next section from the source
 --- @return Lexer.Section
 function Lexer:next()
-	-- Ensure first character is non-whitespace
-	if #self.content > 0 then
-		self.content = self.content:gsub("^%s+", "")
+	-- Ignore whitespace at the beginning of each new token if whitespace insensitive
+	if not self.wss then
+		-- Ensure first character is non-whitespace
+		if #self.content > 0 then
+			self.content = self.content:gsub("^%s+", "")
+		end
 	end
 
 	-- If there are no characters, there is no section
@@ -118,11 +126,11 @@ function Lexer.Section:is(token)
 end
 
 function Lexer.Section:__tostring()
-	local textTokens = list(self.tokens)
-		:map(function(token)
-			return tostring(token)
-		end)
-		:table()
+	local textTokens = {}
+	
+	for token in pairs(self.tokens) do
+		table.insert(textTokens, tostring(token))
+	end
 
 	if #textTokens > 0 then
 		return string.format("(%s '%s')", table.concat(textTokens, ", "), self.text)

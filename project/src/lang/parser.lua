@@ -27,9 +27,18 @@ function Parser:new(entry)
 end
 
 --- Returns whether the the token could be integrated into the syntax tree
---- @param token Lexer.Token Token to integrate
+--- @param token Lexer.Section Token to integrate
 --- @return boolean
 function Parser:integrate(token)
+	-- Always succeed for tokens that may be ignored
+	if token then
+		for t in pairs(token.tokens) do
+			if t.comment then
+				return true
+			end
+		end
+	end
+
 	return self.root:integrate(token)
 end
 

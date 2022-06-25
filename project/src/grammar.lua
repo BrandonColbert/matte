@@ -22,13 +22,20 @@ local conditionOp = Symbol("ConditionOp", "&&", "||", "%?%?")
 local logicOp = Symbol("LogicOp", "&", "|", "%^", "<<", ">>")
 local relationOp = Symbol("RelationOp", "[<>]", "<=", ">=", "==", "!=", "in", "!in")
 local keyword = Symbol("Keyword",
-	"true", "false", "nan", "infinity", "none", "any",
-	"let", "fn",
-	"new", "as",
-	"for", "while", "switch",
-	"continue", "break", "return", "default",
-	"from", "import"
+	"boolean", "number", "string", "object", "any", -- Primitive types
+	"true", "false", "infinity", "nan", -- Primitive values
+	"none", -- Primitive type/value combos
+	"new", "as", -- Transformers
+	"let", "fn", -- Creators
+	"if", "else", "switch", "for", "while", -- Flow control
+	"continue", "break", "default", "return", -- Control directives
+	"from", "import" -- Modules
 )
+
+Symbol("Comment",
+	"//.-\r\n", "//.-\n", --Single line comment
+	"/%*.-%*/" -- Multiline comment
+):setComment(true)
 
 -- Rules
 local stat = Symbol("stat")
@@ -82,8 +89,7 @@ local signature = Symbol("signature", t"(", names, '?', t")", r(t":", rtype), '?
 
 rtype:addRequirementSet(
 	name
-	| t"any"
-	| t"none"
+	| t"boolean" | t"number" | t"string" | t"object" | t"any" | t"none"
 	| r(rtype, t"[]") -- Array of type
 )
 
@@ -136,10 +142,10 @@ perform:addRequirementSet(
 
 fn:addRequirementSet(t"fn", name, signature, perform)
 
-local importItem = Symbol("importItem", name, r(t"as", name), '?')
+local importItem = Symbol("importItem", name | t"*", r(t"as", name), '?')
 local importItems = Symbol("importItems", importItem, r(t",", importItem), '*')
 
 import:addRequirementSet(
-	r(t"from", string, t"import", importItems)
-	| r(t"from", name, t"import", importItems)
+	r(t"from", string, t"import", importItems) -- Import from file
+	| r(t"from", name, t"import", importItems) -- Import destructuring
 )
