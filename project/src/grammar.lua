@@ -61,7 +61,7 @@ local keyword = Symbol("Keyword",
 	"continue", "break", "return", -- Flow directives
 	"from", "import", -- Modules
 	"let", "fn", "op", -- Declaration
-	"class", "implement", -- Structures
+	"class", "implement", "interface", "enum", "@interface", -- Structures
 	"new", "as", "static", "extends", "default"
 )
 
@@ -124,24 +124,29 @@ importItem:requires(name | t"*", r(t"as", name), '?')
 -- Statement
 local block = Symbol("block")
 local exp = Symbol("exp")
+local annotate = Symbol("annotate")
 local lambda = Symbol("lambda")
+local declarable = Symbol("declarable")
 local assignable = Symbol("assignable")
 local ifElseStat = Symbol("if_else")
 local switchStat = Symbol("switch")
 local forLoop = Symbol("for")
 local whileLoop = Symbol("while")
 local structure = Symbol("structure")
+local implementation = Symbol("implementation")
 stat:requires(
 	block
 	| exp
-	| r(t"fn", name, lambda) -- Function declaration
-	| r(t"let", assignable, t"=", exp) -- Variable declaration
+	| r(annotate, '*', t"fn", name, lambda) -- Function declaration
+	| r(t"let", declarable, t"=", exp) -- Variable declaration
 	| r(assignable, algebraOp | bitwiseOp | conditionOp, '?', t"=", exp) -- Variable assignment
 	| ifElseStat | switchStat
 	| forLoop | whileLoop
 	| t"continue" | t"break" -- Loop control
 	| r(t"return", exp, '?') -- Return statement
 	| structure
+	| implementation
+	-- | r(t"lua", string) -- Direct translation
 )
 
 -- Block
@@ -181,6 +186,12 @@ typename:requires(
 	| r(t"...", typename) -- Rest of type
 )
 
+-- Annotate
+annotate:requires(
+	t"@", name, -- Annotation name
+	r(t"(", arguments, '?', t")"), '?' -- Optional arguments
+)
+
 -- Lambda
 local signature = Symbol("signature")
 local perform = Symbol("perform")
@@ -215,11 +226,18 @@ perform:requires(
 	| r(t"=>", stat)
 )
 
--- Assignable
-assignable:requires(
+-- Declarable
+declarable:requires(
 	variable
 	| r(t"[", variables, t"]") -- Array destructure
 	| r(t"{", variables, t"}") -- Object destructure
+)
+
+-- Assignable
+assignable:requires(
+	name
+	| r(assignable, t".", name) -- Object member
+	| r(assignable, t"[", exp, t"]") -- Item at object index
 )
 
 -- If-Else Statement
@@ -251,11 +269,19 @@ forLoop:requires(t"for", name, t"in", exp, perform)
 whileLoop:requires(t"while", exp, perform)
 
 -- Structure
+local archetype = Symbol("archetype")
+structure:requires(annotate, '*', archetype)
+
+-- Archetype
 local class = Symbol("class")
-local implementation = Symbol("implementation")
-structure:requires(
+local interface = Symbol("interface")
+local enum = Symbol("enum")
+local annotation = Symbol("annotation")
+archetype:requires(
 	class
-	| implementation
+	| interface
+	| enum
+	| annotation
 )
 
 -- Class
@@ -272,17 +298,24 @@ local classMember = Symbol("class_member")
 classBody:requires(t"{", classMember, '*', t"}")
 
 -- Class Member
+local classAttribute = Symbol("class_attribute")
+local interfaceRequirement = Symbol("interface_requirement")
+local implementationBody = Symbol("implementation_body")
+classMember:requires(
+	r(annotate, '*', classAttribute)
+	| interfaceRequirement
+	| r(t"implement", typename, implementationBody) -- Local interface implementation
+	| structure -- Nested structure
+)
+
+-- Class Attribute
 local constructor = Symbol("constructor")
 local method = Symbol("method")
 local property = Symbol("property")
 local opMethod = Symbol("op_method")
-local implementationBody = Symbol("implementation_body")
-classMember:requires(
+classAttribute:requires(
 	r(visibility, '?', t"static", '?', constructor | method | property) -- Constructor, method, property
 	| opMethod -- Operator overload
-	| r(t"implement", typename, r(t",", typename), '*') -- Interface requirement
-	| r(t"implement", typename, implementationBody) -- Interface implementation
-	| structure -- Nested structure
 )
 
 -- Constructor
@@ -316,15 +349,93 @@ get:requires(t"=>", stat)
 -- Operator method
 opMethod:requires(t"op", name, signature, perform, '?')
 
+-- Interface Requirement
+interfaceRequirement:requires(t"implement", typename, r(t",", typename), '*')
+
 -- Implementation Body
 local implementationMember = Symbol("implementation_member")
 implementationBody:requires(t"{", implementationMember, '*', t"}")
 
 -- Implementation Member
-implementationMember:requires(
+local implementationAttribute = Symbol("implementation_attribute")
+implementationMember:requires(annotate, '*', implementationAttribute)
+
+-- Implementation Attribute
+implementationAttribute:requires(
 	method
 	| property
 	| opMethod
+)
+
+-- Interface
+local interfaceBody = Symbol("interface_body")
+interface:requires(
+	t"interface", name, -- Name
+	genericParameters, '?', -- Generics
+	interfaceBody
+)
+
+-- Interface Body
+local interfaceMember = Symbol("interface_member")
+interfaceBody:requires(t"{", interfaceMember, '*', t"}")
+
+-- Interface Member
+local interfaceAttribute = Symbol("interface_attribute")
+interfaceMember:requires(
+	interfaceRequirement
+	| r(annotate, '*', interfaceAttribute)
+	| structure -- Nested structure
+)
+
+-- Interface Attribute
+interfaceAttribute:requires(
+	method
+	| property
+	| opMethod
+)
+
+-- Enum
+local enumMember = Symbol("enum_member")
+enum:requires(
+	t"enum", name,
+	t"{", enumMember, '*', t"}"
+)
+
+-- Enum Member
+local enumAttribute = Symbol("enum_attribute")
+enumMember:requires(annotate, '*', enumAttribute)
+
+-- Enum Attribute
+local enumValue = Symbol("enum_value")
+enumAttribute:requires(
+	property
+	| enumValue
+	| constructor
+)
+
+-- Enum Value
+enumValue:requires(
+	name
+	| r(name, t"=", number)
+	| r(name, t"(", arguments, '?', t")")
+)
+
+-- Annotation
+local annotationMember = Symbol("annotation_member")
+annotation:requires(
+	t"@interface", name,
+	t"{", annotationMember, '*', t"}"
+)
+
+-- Annotation Member
+local annotationAttribute = Symbol("annotation_attribute")
+annotationMember:requires(annotate, '*', annotationAttribute)
+
+-- Annotation Attribute
+annotationAttribute:requires(
+	property
+	| constructor
+	| enum
 )
 
 -- Implementation
