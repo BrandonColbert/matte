@@ -1,6 +1,1 @@
-fn sign(n: number): number => switch n {
-	n if n > 0 => 1
-	n if n < 0 => -1
-	0 => 0
-	default => nan
-}
+print("Hello world!")

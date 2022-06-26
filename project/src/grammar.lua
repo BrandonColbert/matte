@@ -19,8 +19,9 @@ local name = Symbol("Name", "[%a_][%a%d_]*")
 local string = Symbol("String", "\".-[^\\]\"")
 local algebraOp = Symbol("AlgebraOp", "[%+%-%*/%%]", "%*%*")
 local conditionOp = Symbol("ConditionOp", "&&", "||", "%?%?")
-local logicOp = Symbol("LogicOp", "&", "|", "%^", "<<", ">>")
 local relationOp = Symbol("RelationOp", "[<>]", "<=", ">=", "==", "!=", "in", "!in")
+local visibility = Symbol("Visibility", "public", "protected", "private")
+
 local keyword = Symbol("Keyword",
 	"boolean", "number", "string", "object", "any", -- Primitive types
 	"true", "false", "infinity", "nan", -- Primitive values
@@ -29,7 +30,9 @@ local keyword = Symbol("Keyword",
 	"let", "fn", -- Creators
 	"if", "else", "switch", "for", "while", -- Flow control
 	"continue", "break", "default", "return", -- Control directives
-	"from", "import" -- Modules
+	"from", "import", -- Modules
+	"class", -- Archetypes
+	"static", "abstract", "extends", "implement"
 )
 
 Symbol("Comment",
@@ -47,6 +50,9 @@ local fn = Symbol("fn")
 local ifElseStatement = Symbol("ifElse")
 local rtype = Symbol("type")
 local import = Symbol("import")
+local archetype = Symbol("archetype")
+local classBody = Symbol("classBody")
+local classMember = Symbol("classMember")
 
 local unaryOp = Symbol("unaryOp"
 	, t"!"
@@ -56,6 +62,14 @@ local unaryOp = Symbol("unaryOp"
 	| t"..." -- Spread
 	| t"+"
 	| t"-"
+)
+
+local logicOp = Symbol("logicOp",
+	t"&"
+	| t"|"
+	| t"^"
+	| r(t"<", t"<") -- Left shift
+	| r(t">", t">") -- Right shift
 )
 
 local binaryOp = Symbol("binaryOp"
@@ -81,16 +95,25 @@ local constant = Symbol("constant"
 	| t"none"
 )
 
+local generic = Symbol("generic", name, r(t"extends", rtype), '?')
+local generics = Symbol("generics", t"<", generic, r(t",", generic), '*', t">")
+
 local entry = Symbol("entry", import, '*', stat, '*')
 local arguments = Symbol("arguments", exp, r(t",", exp), '*')
 local typedName = Symbol("typedName", name, r(t":", rtype), '?')
 local names = Symbol("names", typedName, r(t",", typedName), '*')
-local signature = Symbol("signature", t"(", names, '?', t")", r(t":", rtype), '?')
+
+local signature = Symbol("signature"
+	, generics, '?', t"(", names, '?', t")", r(t":", rtype), '?'
+)
+
+local genericArguments = Symbol("genericArguments", t"<", rtype, r(t",", rtype), '*', t">")
 
 rtype:addRequirementSet(
-	name
-	| t"boolean" | t"number" | t"string" | t"object" | t"any" | t"none"
-	| r(rtype, t"[]") -- Array of type
+	r(name, genericArguments, '?')
+	| t"boolean" | t"number" | t"string" | t"object" | t"any" | t"none" -- Primitive type
+	| r(rtype, t"[", t"]") -- Array of type
+	| r(t"...", rtype) -- Rest of type
 )
 
 exp:addRequirementSet(
@@ -99,9 +122,8 @@ exp:addRequirementSet(
 	| r(exp, binaryOp, exp)
 	| r(unaryOp, exp)
 	| r(t"(", exp, t")") -- Grouping
-	| t"[]" -- Empty array creation
 	| r(t"[", arguments, '?', t"]") -- Array creation
-	| r(exp, t"(", arguments, '?', t")") -- Function call
+	| r(exp, genericArguments, '?', t"(", arguments, '?', t")") -- Function call
 	| r(exp, t".", name) -- Member access
 	| r(exp, t"[", exp, t"]") -- Indexer access
 	| r(exp, t"if", exp, t"else", exp) -- Ternary
@@ -129,6 +151,7 @@ stat:addRequirementSet(
 	| t"continue" | t"break" -- Loop control
 	| r(t"switch", exp, t"{", r(exp | r(name, t"if", exp), perform), '*', r(t"default", perform), '?', t"}") -- Switch statement
 	| r(t"return", exp, '?') -- Return statement
+	| archetype
 )
 
 block:addRequirementSet(
@@ -148,4 +171,50 @@ local importItems = Symbol("importItems", importItem, r(t",", importItem), '*')
 import:addRequirementSet(
 	r(t"from", string, t"import", importItems) -- Import from file
 	| r(t"from", name, t"import", importItems) -- Import destructuring
+)
+
+local propertyGetter = Symbol("propertyGetter"
+	, t"abstract", '?', t"get", r(signature, '?', perform), '?'
+)
+
+local propertySetter = Symbol("propertySetter"
+	, visibility, '?', t"abstract", '?', t"set", r(signature, '?', perform), '?'
+)
+
+local propertyBody = Symbol("propertyBody"
+	, r(t"=", exp) -- Initial value
+	| r(t"=>", stat) -- Getter
+	| r(t"{", propertyGetter, propertySetter, '?', t"}", r(t"=", exp), '?') -- Getter/setter
+)
+
+local property = Symbol("property", typedName, propertyBody, '?')
+
+local method = Symbol("method", t"fn", name, signature, perform, '?')
+
+classMember:addRequirementSet(
+	r(visibility, '?', t"static", '?', property | method) -- Property/method
+	| r(visibility, '?', t"new", t"(", names, '?', t")", perform) -- Constructor
+	| r(t"static", t"new", t"(", t")", perform) -- Static constructor
+	| r(t"op", name, signature, perform, '?') -- Operator overload
+	| r(t"implement", rtype, classBody, '?') -- Interface implementation
+)
+
+classBody:addRequirementSet(t"{", classMember, '*', t"}")
+
+local classStructure = Symbol("class",
+	t"class", name,
+	generics, '?',
+	r(t"extends", rtype), '?',
+	classBody
+)
+
+local implementation = Symbol("implementation",
+	t"implement", rtype,
+	t"for", rtype,
+	classBody
+)
+
+archetype:addRequirementSet(
+	classStructure
+	| implementation
 )

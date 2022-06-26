@@ -444,16 +444,29 @@ function RuleNode:integrate(token, branchIndex, entryIndex, nodeIndex)
 		-- Remove incomplete branches when no token is specified
 		if self:complete() then
 			local incomplete = {}
+			local complete = {}
 
 			-- Gather incomplete branches
 			for i in pairs(self.branches) do
-				if not self:complete(i) then
+				if self:complete(i) then
+					table.insert(complete, i)
+				else
 					table.insert(incomplete, i)
 				end
 			end
 
+			-- Sort the branches by index
+			table.sort(incomplete)
+			table.sort(complete)
+
 			-- Remove incomplete branches
 			for v in list(incomplete):values() do
+				self.branches[v] = nil
+			end
+
+			-- Keep only last complete branch
+			for i = 1, #complete - 1 do
+				local v = complete[i]
 				self.branches[v] = nil
 			end
 
