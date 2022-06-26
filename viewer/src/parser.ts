@@ -90,10 +90,8 @@ export class Parser {
 		if(Options.has("log"))
 			console.log()
 
-		if(errText) {
+		if(errText)
 			console.error(errText)
-			return null
-		}
 
 		try {
 			// Convert last line of parser output to JSON ast

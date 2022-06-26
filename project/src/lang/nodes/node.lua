@@ -15,7 +15,7 @@ Node.__index = Node
 function Node:new(symbol, depth)
 	local o = {
 		symbol = symbol,
-		depth = depth or 0
+		depth = depth or 1
 	}
 
 	setmetatable(o, self)

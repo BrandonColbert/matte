@@ -153,9 +153,9 @@ local Name = {
 	patterns = {
 		token = {
 			direct = "^<([%w%p]+)>$",
-			pattern = "^(%u%a*)$"
+			pattern = "^(%u[%w_]*)$"
 		},
-		rule = "^(%l%a*)$"
+		rule = "^(%l[%w_]*)$"
 	}
 }
 

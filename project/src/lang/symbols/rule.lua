@@ -29,7 +29,7 @@ function Rule:new(...)
 	setmetatable(o, self)
 
 	-- Add base requirements
-	o:addRequirementSet(table.unpack(args))
+	o:requires(table.unpack(args))
 
 	return o
 end
@@ -46,7 +46,7 @@ end
 ---
 --- If the entries consist of a single anonymous rule, all of the anonymous rule's requirement sets will be copied directly.
 --- @param ... Symbol | string Entries for the requirement set
-function Rule:addRequirementSet(...)
+function Rule:requires(...)
 	local entries = {...}
 
 	if #entries == 0 then -- Ignore if no entries provided

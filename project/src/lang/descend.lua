@@ -26,21 +26,24 @@ function Descend.parse(src, entry)
 	end
 
 	-- Create lexer for source
-	local lexer = Lexer:new(src)
+	local lexer = Lexer:new(src .. "\n")
 
 	-- Lex tokens from source and integrate them into the tree
 	while #lexer > 0 do
 		local token = lexer:next()
 
-		if not parser:integrate(token) then
+		if token and not parser:integrate(token) then
 			-- Stop parsing if the next token could not be integrated
-			io.stderr:write(string.format("Failed to parse %s\n", token))
-			break
+			io.stderr:write(string.format("\nFailed to parse %s\n", token))
+
+			return parser:getTree()
 		end
 	end
 
 	-- Indicate no more tokens
-	parser:integrate()
+	if not parser:integrate() then
+		io.stderr:write("\nFailed to complete integration...\n")
+	end
 
 	-- Return root node
 	return parser:getTree()

@@ -191,12 +191,7 @@ function RuleNode:complete(branchIndex, requirementIndex)
 
 		if requirementIndex then
 			local requirement = rset.requirements[requirementIndex]
-			local entry = entries[requirementIndex]
-
-			-- The entry must be present even if it accepts 0 instances
-			if not entry then
-				return false
-			end
+			local entry = entries[requirementIndex] or {}
 
 			if #requirement.quantifier == 0 then
 				if #entry == 0 then -- Empty quantifier requires one entry
@@ -351,8 +346,6 @@ function RuleNode:integrate(token, branchIndex, entryIndex, nodeIndex)
 				end
 			end
 		else
-			self:log(string.format("%s <- %s", self.symbol, token))
-
 			local indices = {
 				valid = {},
 				invalid = {},
@@ -424,6 +417,8 @@ function RuleNode:integrate(token, branchIndex, entryIndex, nodeIndex)
 
 			-- Return true and cull invalid branches as long as one branch integrated successfully.
 			if #indices.valid > 0 then
+				self:log(string.format("%s <- %s", self.symbol, token))
+
 				for v in list(indices.invalid):values() do
 					self.branches[v] = nil
 				end
@@ -470,19 +465,20 @@ function RuleNode:integrate(token, branchIndex, entryIndex, nodeIndex)
 				self.branches[v] = nil
 			end
 
-			-- Do the same for each child node
-			for _, entries in pairs(self.branches) do
-				for entry in list(entries):values() do
-					for node in list(entry):values() do
-						if not node:integrate() then
-							return false
-						end
+			-- Do the same for the main branch
+			local mainBranch = complete[#complete]
+			local entries = self.branches[mainBranch]
+
+			for entry in list(entries):values() do
+				for node in list(entry):values() do
+					if not node:integrate() then
+						return false
 					end
 				end
 			end
-		end
 
-		return true
+			return true
+		end
 	end
 
 	return Node.integrate(self, token)
