@@ -45,7 +45,7 @@ export function tree(node: Node | string, tag?: string): Treant.Node {
 						return {
 							text: {
 								name: ruleNode.symbol,
-								"data-tag": `${tag ?? branch.reqs}\t${branchKey}`
+								"data-tag": `${tag ?? branch.reqs}\t\u3008${branchKey}\u3009`
 							},
 							children: btt(branch)
 						}
@@ -85,7 +85,7 @@ function btt(branch: RuleNode.Branch): Treant.Node[] {
 		return entry.map((node, nodeIndex) => {
 			let position = entry.length > 1 ? `${basePosition}.${1 + nodeIndex}` : basePosition
 
-			return tree(node, `${position}\t${branch.reqs}`)
+			return tree(node, `\u3008${position}\u3009\t${branch.reqs}`)
 		})
 	})
 }

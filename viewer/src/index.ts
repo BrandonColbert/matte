@@ -36,18 +36,6 @@ ast = new Treant({
 			style: {
 				stroke: "white"
 			}
-		},
-		callback: {
-			onTreeLoaded: () => {
-				if(!ast)
-					return
-
-				// Add tooltip based on symbol
-				for(let node of ast.tree.nodeDB.db) {
-					let {text, nodeDOM: element} = node
-					element.title = text["data-tag"] ?? ""
-				}
-			}
 		}
 	},
 	nodeStructure: {}
