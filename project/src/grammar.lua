@@ -37,7 +37,8 @@ local conditionOp = Symbol("ConditionOp",
 local relationOp = Symbol("RelationOp",
 	"[<>]", "<=", ">=", -- Less/greater than (or equal to)
 	"==", "!=", -- Equivalence
-	"in", "!in" -- Set membership
+	"in", "!in", -- Set membership
+	"is", "!is" -- Type compatibility
 )
 
 local visibility = Symbol("Visibility",
@@ -62,6 +63,7 @@ local keyword = Symbol("Keyword",
 	"from", "import", -- Modules
 	"let", "fn", "op", -- Declaration
 	"class", "implement", "interface", "enum", "@interface", -- Structures
+	"this", "This", "super", -- Local scope reference
 	"new", "as", "static", "extends", "default"
 )
 
@@ -92,6 +94,7 @@ local binaryOp = Symbol("binary_op"
 	| relationOp
 	| bitwiseOp
 	| t".." -- Range
+	| t"as" -- Type conversion
 )
 
 local unaryOp = Symbol("unary_op"
@@ -110,7 +113,8 @@ local entry = Symbol("entry", import, '*', stat, '*')
 -- Import
 local importItems = Symbol("import_items")
 import:requires(
-	r(t"from", string, t"import", importItems) -- Import from file
+	r(t"import", importItems) -- Import file from same directory
+	| r(t"from", string, t"import", importItems) -- Import from relative file
 	| r(t"from", name, t"import", importItems) -- Import destructuring
 )
 
@@ -153,16 +157,19 @@ stat:requires(
 block:requires(t"{", stat, '*', t"}")
 
 -- Expresion
+local expressions = Symbol("expressions")
 local arguments = Symbol("arguments")
+local objectLiteral = Symbol("object_literal")
 local genericArguments = Symbol("generic_arguments")
 exp:requires(
 	constant
-	| name
+	| name | t"this" | t"super"
 	| r(exp, binaryOp, exp)
 	| r(unaryOp, exp)
 	| r(t"(", exp, t")") -- Grouping
-	| r(t"[", arguments, '?', t"]") -- Array creation
-	| r(exp, genericArguments, '?', t"(", arguments, '?', t")") -- Function call
+	| r(t"[", expressions, '?', t"]") -- Array creation
+	| objectLiteral
+	| r(exp, genericArguments, '?', arguments) -- Function call
 	| r(exp, t".", name) -- Member access
 	| r(exp, t"[", exp, t"]") -- Indexer access
 	| r(exp, t"if", exp, t"else", exp) -- Ternary
@@ -170,8 +177,30 @@ exp:requires(
 	| lambda -- Anonymous function
 )
 
+-- Expressions
+expressions:requires(exp, r(t",", exp), '*')
+
 -- Arguments
-arguments:requires(exp, r(t",", exp), '*')
+local namedExpressions = Symbol("named_expressions")
+arguments:requires( t"(", expressions | namedExpressions, '?', t")")
+
+-- Named Arguments
+local namedExpression = Symbol("named_expression")
+namedExpressions:requires(namedExpression, r(t",", namedExpression), '*')
+
+-- Named Expression
+namedExpression:requires(name, t":", exp)
+
+-- Object Literal
+local objectLiteralMembers = Symbol("object_literal_members")
+objectLiteral:requires(t"{", objectLiteralMembers, '?', t"}")
+
+-- Object Literal Members
+local objectLiteralMember = Symbol("object_literal_member")
+objectLiteralMembers:requires(objectLiteralMember, r(t",", objectLiteralMember), '*')
+
+-- Object Literal Member
+objectLiteralMember:requires(name | string, t":", exp)
 
 -- Generic Arguments
 local typename = Symbol("type")
@@ -180,6 +209,7 @@ genericArguments:requires(t"<", typename, r(t",", typename), '*', t">")
 -- Typename
 typename:requires(
 	primitive
+	| t"This" -- Self type
 	| r(name, genericArguments, '?')
 	| r(typename, t"[", t"]") -- Array of type
 	| r(t"[", typename, r(t',', typename), '*', t"]") -- Tuple of types
@@ -187,10 +217,7 @@ typename:requires(
 )
 
 -- Annotate
-annotate:requires(
-	t"@", name, -- Annotation name
-	r(t"(", arguments, '?', t")"), '?' -- Optional arguments
-)
+annotate:requires(t"@", name, arguments, '?')
 
 -- Lambda
 local signature = Symbol("signature")
@@ -207,18 +234,23 @@ local generic = Symbol("generic")
 genericParameters:requires(t"<", generic, r(t",", generic), '*', t">")
 
 -- Generic
-generic:requires(name, r(t":", typename, r(t"+", typename), '*'), '?')
+generic:requires(
+	name,
+	r(t":", typename, r(t"+", typename), '*'), '?', -- Inheritance
+	r(t"=", typename), '?' -- Default
+)
 
 -- Parameters
-local variables = Symbol("variables")
-parameters:requires(t"(", variables, '?', t")")
+local parameter = Symbol("parameter")
+parameters:requires(t"(", r(parameter, r(t",", parameter), '*'), '?', t")")
 
--- Variables
-local variable = Symbol("variable")
-variables:requires(variable, r(t",", variable), '*')
-
--- Variable
-variable:requires(name, r(t":", typename), '?')
+-- Parameter
+parameter:requires(
+	name,
+	t"?", '?', -- Optionality
+	r(t":", typename), '?', -- Type
+	r(t"=", exp), '?' -- Default value
+)
 
 -- Perform
 perform:requires(
@@ -227,15 +259,32 @@ perform:requires(
 )
 
 -- Declarable
+local variable = Symbol("variable")
+local variables = Symbol("variables")
+local aliasedVariables = Symbol("aliased_variables")
 declarable:requires(
 	variable
 	| r(t"[", variables, t"]") -- Array destructure
-	| r(t"{", variables, t"}") -- Object destructure
+	| r(t"{", aliasedVariables, t"}") -- Object destructure
 )
+
+-- Variable
+variable:requires(name, r(t":", typename), '?')
+
+-- Variables
+variables:requires(variable, r(t",", variable), '*')
+
+-- Aliased Variables
+local aliasedVariable = Symbol("aliased_variable")
+aliasedVariables:requires(aliasedVariable, r(t",", aliasedVariable), '*')
+
+-- Aliased Variable
+aliasedVariable:requires(variable, r(t"as", name), '?')
 
 -- Assignable
 assignable:requires(
 	name
+	| r(t"this" | t"super", t".", name) -- Self member
 	| r(assignable, t".", name) -- Object member
 	| r(assignable, t"[", exp, t"]") -- Item at object index
 )
@@ -270,7 +319,7 @@ whileLoop:requires(t"while", exp, perform)
 
 -- Structure
 local archetype = Symbol("archetype")
-structure:requires(annotate, '*', archetype)
+structure:requires(annotate, '*', visibility, '?', archetype)
 
 -- Archetype
 local class = Symbol("class")
@@ -417,7 +466,7 @@ enumAttribute:requires(
 enumValue:requires(
 	name
 	| r(name, t"=", number)
-	| r(name, t"(", arguments, '?', t")")
+	| r(name, arguments)
 )
 
 -- Annotation

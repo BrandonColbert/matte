@@ -1,4 +1,5 @@
 import tree from "./tree.js"
+import Node from "./node.js"
 import Treant from "./treant.js"
 
 let source = new EventSource(`http://events.${window.location.host}`)
@@ -11,15 +12,8 @@ source.onmessage = (e: MessageEvent<string>) => {
 
 	switch(event.type) {
 		case "display": // Display a new syntax tree
-			let {scrollLeft, scrollTop} = astElement
-
-			// Create and assign new root node, then reload the tree
-			let node = tree(event.data)
-			ast.tree.initJsonConfig.nodeStructure = node
-			ast.tree.reload()
-
-			// Scroll back to previous location
-			setScroll(astElement, scrollLeft, scrollTop)
+			display(event.data)
+			localStorage.setItem("ast", JSON.stringify(event.data))
 			break
 		case "reload":
 			location.reload()
@@ -45,6 +39,24 @@ ast = new Treant({
 astElement.addEventListener("mousedown", pan)
 astElement.addEventListener("wheel", zoom)
 astElement.addEventListener("contextmenu", e => e.preventDefault())
+
+if(localStorage.getItem("ast"))
+	display(JSON.parse(localStorage.getItem("ast")))
+
+/**
+ * Display a node as a syntax tree
+ * @param node Node to display
+ */
+function display(node: Node) {
+	let {scrollLeft, scrollTop} = astElement
+
+	// Create and assign new root node, then reload the tree
+	ast.tree.initJsonConfig.nodeStructure = tree(node)
+	ast.tree.reload()
+
+	// Scroll back to previous location
+	setScroll(astElement, scrollLeft, scrollTop)
+}
 
 /**
  * Scroll to the given position
