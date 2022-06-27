@@ -31,17 +31,10 @@ body {
 	font-variant-ligatures: none;
 }
 
-	.node[data-tag="Value"] {
-		color: yellow;
-	}
-
-	.node[data-tag="Requirements"] {
-		color: gray;
-	}
-
-	.node[data-tag="Special"] {
-		color: cyan;
-	}
+	.node[data-type="value"] { color: yellow; }
+	.node[data-type="branching"] { color: gray; }
+	.node[data-type="branch"] { color: cyan; }
+	.node[data-type="invalid"] { color: red }
 
 .node p {
 	padding: 2px 6px;

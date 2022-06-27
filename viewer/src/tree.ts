@@ -1,109 +1,93 @@
-/**
- * Converts a Descend AST into a Treant Tree
- * @param obj Descend Node
- * @returns Corresponding Treant Node
- */
-export function tree(obj: any): Treant.Node
+import Node, {TokenNode, RuleNode} from "./node.js"
+import Treant from "./treant.js"
 
 /**
- * @param text Node text
- * @param children Node children
- * @returns A Treant Node with the given values
+ * @param node A descend node
+ * @param tag Desired tooltip
+ * @returns The corresponding Treant node
  */
-export function tree(text: Treant.Node.Text, children: Treant.Node[]): Treant.Node
-
-export function tree(...par1: any[]): Treant.Node {
-	switch(par1.length) {
-		case 1:
-			let node: Treant.Node = {text: {}}
-			let obj: any = par1[0]
-
-			if("symbol" in obj) {
-				let name: string = obj.symbol
-
-				if("value" in obj) { // Lexer Token
-					node.text.name = `(${name} '${obj.value}')`
-					node.text["data-tag"] = "Value"
-				} else if("branches" in obj) { // Rule branches
-					node.text.name = name
-
-					let branches: {[key: string]: any} = obj.branches
-
-					if(Object.keys(branches).length == 1) { // Directly connect to only available branch
-						let branch = Object.values(branches)[0]
-						node.children = [tree(branch)]
-					} else // Connect to all branches
-						node.children = Object.keys(branches).map(key => tree(
-							{name: `{branch ${key}}`, "data-tag": "Special"},
-							[tree(branches[key])]
-						))
-				} else
-					node.text.name = name
-			} else if("reqs" in obj) { // Rule requirements
-				let name = obj.reqs
-
-				if("entries" in obj) { // Requirement entries
-					node.text.name = name
-					node.text["data-tag"] = "Requirements"
-					node.children = []
-
-					for(let entry of obj.entries as any[][]) {
-						if(entry.length == 1) {
-							let x = entry[0]
-
-							if(typeof(x) == "string")
-								node.children.push(tree(
-									{name: "{self}", "data-tag": "Special"},
-									null
-								))
-							else
-								node.children.push(tree(x))
-						} else
-							node.children.push(tree(
-								{name: "{entry}", "data-tag": "Special"},
-								entry.map(subentry => tree(subentry))
-							))
+export function tree(node: Node | string, tag?: string): Treant.Node {
+	switch(typeof(node)) {
+		case "string":
+			return {
+				text: {
+					name: "self",
+					"data-type": "invalid"
+				}
+			}
+		case "object":
+			if("value" in node) {
+				let tokenNode = node as TokenNode
+		
+				return {
+					text: {
+						name: tokenNode.value,
+						"data-tag": tag ?? tokenNode.symbol,
+						"data-type": "value"
 					}
+				}
+			} else if("branches" in node) {
+				let ruleNode = node as RuleNode
+		
+				switch(Object.keys(ruleNode.branches).length) {
+					case 0:
+						return {
+							text: {
+								name: ruleNode.symbol,
+								"data-tag": tag,
+								"data-type": "invalid"
+							}
+						}
+					case 1:
+						let branchKey = Object.keys(ruleNode.branches)[0]
+						let branch = ruleNode.branches[branchKey]
+		
+						return {
+							text: {
+								name: ruleNode.symbol,
+								"data-tag": `${tag ?? branch.reqs}\t${branchKey}`
+							},
+							children: btt(branch)
+						}
+					default:
+						return {
+							text: {
+								name: ruleNode.symbol,
+								"data-tag": tag,
+								"data-type": "branching"
+							},
+							children: Object.keys(ruleNode.branches).map(branchKey => {
+								let branch = ruleNode.branches[branchKey]
+				
+								return {
+									text: {
+										name: branchKey,
+										"data-tag": branch.reqs,
+										"data-type": "branch"
+									},
+									children: btt(branch)
+								}
+							})
+						}
 				}
 			}
 
-			return node
-		case 2:
-			let text: Treant.Node.Text = par1[0]
-			let children: Treant.Node[] = par1[1]
-
-			return {text: text, children: children}
-		default:
-			return null
+			break
 	}
+
+	throw new Error(`Unable to create Treant node for '${node}'`)
 }
 
-export const Treant: Treant = (window as any).Treant
+function btt(branch: RuleNode.Branch): Treant.Node[] {
+	return branch.entries.flatMap((entry, requirementIndex) => {
+		let basePosition = `${1 + requirementIndex}`
 
-export interface Treant {
-	new(options: Treant.Options): this
-	[key: string]: any
-	[key: number]: any
-}
+		return entry.map((node, nodeIndex) => {
+			let position = entry.length > 1 ? `${basePosition}.${1 + nodeIndex}` : basePosition
 
-export namespace Treant {
-	export interface Options {
-		chart: any
-		nodeStructure: Node
-	}
-
-	export interface Node {
-		text?: Node.Text
-		children?: Node[]
-	}
-
-	export namespace Node {
-		export interface Text {
-			name?: string
-			[key: string]: string
-			[key: number]: any
-		}
-	}
+			return tree(node, `${position}\t${branch.reqs}`)
+		})
+	})
 }
 
 export default tree

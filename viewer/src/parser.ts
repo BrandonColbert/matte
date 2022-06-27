@@ -1,5 +1,6 @@
 import fs from "fs/promises"
 import Options from "./options.js"
+import Node from "./node.js"
 import {stdout} from "process"
 import * as childProcess from "child_process"
 
@@ -26,7 +27,7 @@ export class Parser {
 			this.baseArgs.push(`-entry=${Options.get("entry")}`)
 	}
 
-	public async process(): Promise<Parser.Node> {
+	public async process(): Promise<Node> {
 		let args: string[] = [...this.baseArgs]
 
 		// Add source code to parse
@@ -99,27 +100,6 @@ export class Parser {
 		} catch(e) {
 			console.log(`Last line of output is not valid JSON:\n\t${line}`)
 			return null
-		}
-	}
-}
-
-export namespace Parser {
-	export interface Node {
-		symbol: string
-	}
-
-	export interface TokenNode extends Node {
-		value: string
-	}
-
-	export interface RuleNode extends Node {
-		branches: {[key: number]: RuleNode.Branch}
-	}
-
-	export namespace RuleNode {
-		export interface Branch {
-			reqs: string
-			entries: Node[][]
 		}
 	}
 }

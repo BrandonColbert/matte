@@ -1,4 +1,5 @@
-import tree, {Treant} from "./tree.js"
+import tree from "./tree.js"
+import Treant from "./treant.js"
 
 let source = new EventSource(`http://events.${window.location.host}`)
 let astElement = document.querySelector<HTMLDivElement>("#ast")
