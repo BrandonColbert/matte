@@ -44,7 +44,15 @@ function Lexer:next()
 	-- Check tokens in insertion order
 	for token in list(Symbol.Registry.getTokens()):values() do
 		for pattern in list(token.patterns):values() do
-			local value = self.content:match("^" .. pattern)
+			local value
+
+			if type(pattern) == "string" then -- String patterns use lua patterns
+				value = self.content:match("^" .. pattern)
+			elseif type(pattern) == "function" then -- Function patterns accept content and return match
+				value = pattern(self.content)
+			else
+				error(string.format("Unknown pattern type '%s'", type(pattern)))
+			end
 			
 			-- Add to matches if the matched text is longer than or equal to the current longest remaining text
 			if value and (not text or #value >= #text) then

@@ -14,13 +14,54 @@ local function r(firstEntry, ...) return Rule:new(firstEntry, ...) end
 
 -- TOKENS
 local name = Symbol("Name", "[%a_][%a%d_]*")
-local string = Symbol("String", "\".-[^\\]\"")
 local boolean = Symbol("Boolean", "true", "false")
+local pattern = Symbol("Pattern", "/[^/].-[^\\]/")
+
 local number = Symbol("Number",
 	"%-?%d+", -- Integer
 	"%-?%d+%.%d+", -- Float
 	"infinity",
 	"nan" -- Not a number
+)
+
+local string = Symbol("String",
+	"[fl]?\"\"", -- Empty string
+	"l?\"[^\"].-[^\\]\"", -- String
+	function(content) -- Formatted string
+		-- Check if format string begins
+		if content:match("^f\"") then
+			local depth = 0
+			local pos = 2
+
+			-- Evaluate balance
+			repeat
+				-- Find the next interpolation item or potential end quote
+				local i, j, value = string.find(content, "[^\\]([{}\"])", pos)
+
+				if value then
+					pos = j
+
+					-- Modify depth or end the string if needed
+					if value == "{" then
+						depth = depth + 1
+					elseif value == "}" then
+						depth = depth - 1
+					elseif value == "\"" and depth == 0 then
+						break
+					end
+				else
+					break
+				end
+			until depth < 0
+
+			-- If the value is balanced and ends with a quote return it
+			if depth == 0 and content:sub(pos, pos) == "\"" then
+				return string.sub(content, 1, pos)
+			end
+		end
+
+		return nil
+	end
 )
 
 local algebraOp = Symbol("AlgebraOp",
@@ -48,7 +89,7 @@ local visibility = Symbol("Visibility",
 )
 
 local primitive = Symbol("Primitive",
-	"boolean", -- Boolean type
+	"bool", -- Boolean type
 	"number", -- Numeric type
 	"string", -- String type
 	"object", -- Table type
@@ -59,12 +100,14 @@ local primitive = Symbol("Primitive",
 -- Additional non-contextual keywords
 local keyword = Symbol("Keyword",
 	"if", "else", "switch", "for", "while", -- Flow control
-	"continue", "break", "return", -- Flow directives
+	"default", "continue", "break", "return", -- Flow directives
 	"from", "import", -- Modules
 	"let", "fn", "op", -- Declaration
 	"class", "implement", "interface", "enum", "@interface", -- Structures
+	"static", "extends", -- Structure modifiers
 	"this", "This", "super", -- Local scope reference
-	"new", "as", "static", "extends", "default"
+	"new", -- Instantiation
+	"as" -- Aliasing/casting
 )
 
 Symbol("Comment",
@@ -164,13 +207,14 @@ local genericArguments = Symbol("generic_arguments")
 exp:requires(
 	constant
 	| name | t"this" | t"super"
+	| pattern
 	| r(exp, binaryOp, exp)
 	| r(unaryOp, exp)
 	| r(t"(", exp, t")") -- Grouping
 	| r(t"[", expressions, '?', t"]") -- Array creation
 	| objectLiteral
 	| r(exp, genericArguments, '?', arguments) -- Function call
-	| r(exp, t".", name) -- Member access
+	| r(exp, t"?", '?', t"." | t"->", name) -- Member/operator access
 	| r(exp, t"[", exp, t"]") -- Indexer access
 	| r(exp, t"if", exp, t"else", exp) -- Ternary
 	| r(t"new", exp) -- Instantiation
@@ -207,14 +251,18 @@ local typename = Symbol("type")
 genericArguments:requires(t"<", typename, r(t",", typename), '*', t">")
 
 -- Typename
+local typenames = Symbol("types")
 typename:requires(
 	primitive
 	| t"This" -- Self type
 	| r(name, genericArguments, '?')
 	| r(typename, t"[", t"]") -- Array of type
-	| r(t"[", typename, r(t',', typename), '*', t"]") -- Tuple of types
+	| typenames -- Tuple of types
 	| r(t"...", typename) -- Rest of type
 )
+
+-- Typenames
+typenames:requires(t"[", r(typename, r(t',', typename), '*'), '?', t"]")
 
 -- Annotate
 annotate:requires(t"@", name, arguments, '?')
@@ -222,7 +270,7 @@ annotate:requires(t"@", name, arguments, '?')
 -- Lambda
 local signature = Symbol("signature")
 local perform = Symbol("perform")
-lambda:requires(signature, perform)
+lambda:requires(name | signature, perform)
 
 -- Signature
 local genericParameters = Symbol("generic_parameters")
@@ -279,7 +327,7 @@ local aliasedVariable = Symbol("aliased_variable")
 aliasedVariables:requires(aliasedVariable, r(t",", aliasedVariable), '*')
 
 -- Aliased Variable
-aliasedVariable:requires(variable, r(t"as", name), '?')
+aliasedVariable:requires(variable, r(t"as", declarable), '?')
 
 -- Assignable
 assignable:requires(

@@ -4,7 +4,7 @@ local Escape = require "utils.escape"
 --- Represents a category which text may fall under.
 --- @class Token: Symbol
 --- @field name string Token name
---- @field patterns string[] Patterns used to find matches
+--- @field patterns (string | fun(content: string): content)[] Patterns used to find matches
 --- @field comment boolean Whether this token should be ignored by the parser
 local Token = {}
 Token.__index = Token
