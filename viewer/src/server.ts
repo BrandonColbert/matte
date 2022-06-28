@@ -29,13 +29,6 @@ export default class Server extends EventEmitter {
 				case 2:
 					switch(subdomains[0]) {
 						case "events": // Provide server-sent events
-							// Prevent connections from other machines
-							if(!req.headers.origin?.startsWith(`${location.protocol}//${subdomains.at(-1)}`)) {
-								res.writeHead(403)
-								res.end()
-								break
-							}
-
 							res.writeHead(200, {
 								"Content-Type": "text/event-stream",
 								"Cache-Control": "no-cache",

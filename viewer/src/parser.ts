@@ -1,7 +1,7 @@
-import fs from "fs/promises"
+import path from "path"
 import Options from "./options.js"
 import Node from "./node.js"
-import {stdout} from "process"
+import {cwd, stdout} from "process"
 import * as childProcess from "child_process"
 
 export class Parser {
@@ -27,36 +27,14 @@ export class Parser {
 			this.baseArgs.push(`-entry=${Options.get("entry")}`)
 	}
 
-	public async process(): Promise<Node> {
+	public async run(): Promise<Node> {
 		let args: string[] = [...this.baseArgs]
 
 		// Add source code to parse
 		if(Options.has("src"))
 			args.push(`-src=${Options.get("src")}`)
-		else if(Options.has("srcPath")) {
-			try {
-				await fs.access(Options.get("srcPath"))
-			} catch(e) {
-				console.log(`\nUnable to read file: ${Options.get("srcPath")}`)
-				return null
-			}
-
-			let data = await fs.readFile(Options.get("srcPath"))
-			let text = data.toString()
-			let src = text.trim()
-
-			// Retry if file could not be read
-			if(!text) {
-				let stats = await fs.stat(Options.get("srcPath"))
-
-				if(stats.size == 0)
-					args.push(`-src=`)
-				else
-					return await this.process()
-			}
-
-			args.push(`-src=${src}`)
-		}
+		else if(Options.has("srcPath"))
+			args.push(`-input=${path.join(cwd(), Options.get("srcPath"))}`)
 
 		// Run the parser in its directory
 		let [line, errText] = ["", ""]
@@ -69,11 +47,14 @@ export class Parser {
 
 		process.stdout.on("data", (chunk: Buffer) => {
 			let data = line + chunk.toString()
-			let lines = data.split(/\r?\n/)
+			let lines = data.split(/(\n)/g)
 
-			let lastLineIndex = lines.length - 1 - lines.slice().reverse().findIndex(line => Boolean(line))
-			let head = lines.slice(0, lastLineIndex).join("\n")
-			let tail = lines.slice(lastLineIndex).join("\n")
+			let lastLineIndex = lines.length - 1 - lines.slice()
+				.reverse()
+				.findIndex(line => !/^\s*$/.test(line))
+
+			let head = lines.slice(0, lastLineIndex).join("")
+			let tail = lines.slice(lastLineIndex).join("")
 
 			// Keep the last non-empty line
 			line = tail

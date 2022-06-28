@@ -32,10 +32,15 @@ function Descend.parse(src, entry)
 	while #lexer > 0 do
 		local token = lexer:next()
 
-		if token and not parser:integrate(token) then
-			-- Stop parsing if the next token could not be integrated
-			io.stderr:write(string.format("\nFailed to parse %s\n", token))
-
+		if token then
+			if not parser:integrate(token) then
+				-- Stop parsing if the next token could not be integrated
+				io.stderr:write(string.format("\nFailed to parse: %s\n", token))
+				return parser:getTree()
+			end
+		else
+			-- Stop parsing if text remains, but no token be acquired
+			io.stderr:write(string.format("\nFailed to tokenize: %s\n", lexer.content:sub(1, 15)))
 			return parser:getTree()
 		end
 	end

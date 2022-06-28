@@ -23,28 +23,34 @@ local options = list(arg):reduce(function(o, entry)
 	return o
 end, {})
 
--- Get source code with correct formatting
-local src = Escape.cli(options["src"] or "")
+local src, result
 
-if options["parse"] then
-	local entry = options["entry"]
-	local result = Descent.parse(src, entry)
+-- Get input
+if options.src then
+	src = Escape.cli(options.src or "")
+elseif options.input then
+	local f = assert(io.open(options.input, "r"))
+	src = f:read("*all")
+	f:close()
+else
+	error("No source provided.")
+end
 
-	print(result)
-elseif options["transpile"] then
-	local result = Descent.transpile(src)
-
-	print(result)
-elseif options["run"] then
-	local args = options["args"] or {}
-
-	return Descent.run(src, table.unpack(args))
+-- Enter mode
+if options.parse then
+	result = Descent.parse(src, options.entry)
+elseif options.transpile then
+	result = Descent.transpile(src)
+elseif options.run then
+	return Descent.run(src, table.unpack(options.args or {}))
 else -- Show help if no valid modes were specified
 	local clip = {
-		{"parse <src> [entry]", "Enter parser mode."},
-		{"transpile <src>", "Enter transpilation mode."},
-		{"run <src> [args]", "Enter execution mode."},
-		{"src=<val>", "Source code to operate on."},
+		{"parse <src|input> [output] [entry]", "Enter parser mode."},
+		{"transpile <src|input> [output]", "Enter transpilation mode."},
+		{"run <src|input> [args]", "Enter execution mode."},
+		{"src=<val>", "Source to operate on."},
+		{"input=<val>", "Path to the file containing the source."},
+		{"output=<val>", "Path to save the result to."},
 		{"entry=<val>", "Rule to use as an entry point when parsing."},
 		{"args=<val>", "Command line arguments when running."}
 	}
@@ -61,4 +67,13 @@ else -- Show help if no valid modes were specified
 		local name, desc = table.unpack(clip[i])
 		print(string.format("-%-" .. tostring(width) .. "s\t%s", name, desc))
 	end
+end
+
+-- Handle output
+if options.output then
+	local f = assert(io.open(options.output, "w"))
+	f:write(tostring(result))
+	f:close()
+else
+	print(result)
 end

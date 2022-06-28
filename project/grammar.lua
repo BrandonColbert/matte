@@ -26,7 +26,8 @@ local number = Symbol("Number",
 
 local string = Symbol("String",
 	"[fl]?\"\"", -- Empty string
-	"l?\"[^\"].-[^\\]\"", -- String
+	"l?\"[^\"\\]\"", -- Single character string
+	"l?\"[^\"].-[^\\]\"", -- Multicharacter string
 	function(content) -- Formatted string
 		-- Check if format string begins
 		if content:match("^f\"") then
@@ -76,6 +77,7 @@ local conditionOp = Symbol("ConditionOp",
 )
 
 local relationOp = Symbol("RelationOp",
+	"<=>", -- Three-way comparison
 	"[<>]", "<=", ">=", -- Less/greater than (or equal to)
 	"==", "!=", -- Equivalence
 	"in", "!in", -- Set membership
@@ -110,10 +112,17 @@ local keyword = Symbol("Keyword",
 	"as" -- Aliasing/casting
 )
 
+Symbol("Whitespace", "(%s+)[^\n\r]"):setIgnore(true)
+
+Symbol("End",
+	"\n%s*",
+	"\r\n%s*"
+):setIgnore(true)
+
 Symbol("Comment",
-	"//.-\r\n", "//.-\n", --Single line comment
+	"//.-\n", "//.-\r\n", --Single line comment
 	"/%*.-%*/" -- Multiline comment
-):setComment(true)
+):setIgnore(true)
 
 -- RULES
 local constant = Symbol("constant"
@@ -169,8 +178,8 @@ importItems:requires(importItem, r(t",", importItem), '*')
 importItem:requires(name | t"*", r(t"as", name), '?')
 
 -- Statement
-local block = Symbol("block")
 local exp = Symbol("exp")
+local block = Symbol("block")
 local annotate = Symbol("annotate")
 local lambda = Symbol("lambda")
 local declarable = Symbol("declarable")
@@ -182,8 +191,8 @@ local whileLoop = Symbol("while")
 local structure = Symbol("structure")
 local implementation = Symbol("implementation")
 stat:requires(
-	block
-	| exp
+	exp
+	| block
 	| r(annotate, '*', t"fn", name, lambda) -- Function declaration
 	| r(t"let", declarable, t"=", exp) -- Variable declaration
 	| r(assignable, algebraOp | bitwiseOp | conditionOp, '?', t"=", exp) -- Variable assignment
@@ -195,9 +204,6 @@ stat:requires(
 	| implementation
 	-- | r(t"lua", string) -- Direct translation
 )
-
--- Block
-block:requires(t"{", stat, '*', t"}")
 
 -- Expresion
 local expressions = Symbol("expressions")
@@ -264,13 +270,19 @@ typename:requires(
 -- Typenames
 typenames:requires(t"[", r(typename, r(t',', typename), '*'), '?', t"]")
 
+-- Block
+block:requires(t"{", stat, '*', t"}")
+
 -- Annotate
 annotate:requires(t"@", name, arguments, '?')
 
 -- Lambda
 local signature = Symbol("signature")
 local perform = Symbol("perform")
-lambda:requires(name | signature, perform)
+lambda:requires(
+	r(name, t"=>", stat)
+	| r(signature, perform)
+)
 
 -- Signature
 local genericParameters = Symbol("generic_parameters")

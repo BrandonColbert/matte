@@ -9,8 +9,9 @@ local Parser = {}
 Parser.__index = Parser
 
 --- @param entry Symbol Entry point
+--- @param options? Parser.Options
 --- @return Parser
-function Parser:new(entry)
+function Parser:new(entry, options)
 	local o = {}
 
 	if getmetatable(entry) == Token then
@@ -33,13 +34,23 @@ function Parser:integrate(token)
 	-- Always succeed for tokens that may be ignored
 	if token then
 		for t in pairs(token.tokens) do
-			if t.comment then
+			if t.options.ignore then
 				return true
 			end
 		end
 	end
 
-	return self.root:integrate(token)
+	if not self.root:integrate(token) then
+		if token then
+			for t in pairs(token.tokens) do
+				if t.options.blocking then
+					return false
+				end
+			end
+		end
+	end
+
+	return true
 end
 
 --- Returns the root node of the syntax tree

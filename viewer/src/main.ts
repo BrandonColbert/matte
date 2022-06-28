@@ -76,7 +76,7 @@ async function run(): Promise<void> {
  * @returns Whether output could be generated
  */
 async function generate(): Promise<boolean> {
-	let node = await parser.process()
+	let node = await parser.run()
 
 	if(!node)
 		return false

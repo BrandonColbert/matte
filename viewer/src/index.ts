@@ -2,9 +2,17 @@ import tree from "./tree.js"
 import Node from "./node.js"
 import Treant from "./treant.js"
 
-let source = new EventSource(`http://events.${window.location.host}`)
+let source: EventSource
 let astElement = document.querySelector<HTMLDivElement>("#ast")
 let ast: Treant = null
+
+// Connect to viewer server
+if(window.location.host)
+	source = new EventSource(`http://events.${window.location.host}`)
+else if(window.location.hash.slice(1))
+	source = new EventSource(`http://events.localhost:${window.location.hash.slice(1)}`)
+else
+	throw new Error("No source available...")
 
 // Listen for server-sent events
 source.onmessage = (e: MessageEvent<string>) => {

@@ -3,17 +3,17 @@
 :root {
 	--color-accent: firebrick;
 	--color-accent-variant: crimson;
-	--color-background: #292e3e;
+	--color-background: #2c3348;
 	--color-foreground: #252b3d;
-	--color-foreground-variant: #2c3348;
+	--color-foreground-variant: #292e3e;
 	--color-primary: darkslateblue;
 	--color-primary-variant: slateblue;
 	--color-text: #e6dbdb;
 }
 
 html {
-	font-family: 'Fira Code', monospace;
-	background: var(--color-foreground-variant);
+	font-family: "Fira Code", monospace;
+	background: var(--color-background);
 	color: var(--color-text);
 }
 
@@ -31,11 +31,11 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-	background: var(--color-foreground-variant);
+	background: var(--color-background);
 }
 
 ::-webkit-scrollbar-thumb {
-	background: var(--color-background);
+	background: var(--color-foreground-variant);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -43,5 +43,5 @@ html {
 }
 
 ::-webkit-scrollbar-corner {
-	background: var(--color-foreground-variant);
+	background: var(--color-background);
 }

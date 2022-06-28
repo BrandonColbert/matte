@@ -2,10 +2,13 @@ local Symbol = require "lang.symbols.symbol"
 local Escape = require "utils.escape"
 
 --- Represents a category which text may fall under.
+--- @class Token.Options
+--- @field ignore boolean Whether this token should be ignored by the parser
+--- @field blocking boolean Whether the parser may continue if integration fails
 --- @class Token: Symbol
 --- @field name string Token name
 --- @field patterns (string | fun(content: string): content)[] Patterns used to find matches
---- @field comment boolean Whether this token should be ignored by the parser
+--- @field options Token.Options
 local Token = {}
 Token.__index = Token
 setmetatable(Token, Symbol)
@@ -34,17 +37,27 @@ function Token:new(...)
 
 	local o = Symbol:new(name)
 	o.patterns = patterns
-	o.comment = false
+	o.options = {
+		ignore = false,
+		blocking = true
+	}
+
 	setmetatable(o, self)
 
 	return o
 end
 
---- Sets the comment option for this token and returns itself
 --- @param state boolean
 --- @return Token
-function Token:setComment(state)
-	self.comment = state
+function Token:setIgnore(state)
+	self.options.ignore = state
+	return self
+end
+
+--- @param state boolean
+--- @return Token
+function Token:setBlocking(state)
+	self.options.blocking = state
 	return self
 end
 

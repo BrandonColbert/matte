@@ -1,21 +1,19 @@
 local Symbol = require "lang.symbols.symbol"
 local list = require "utils.list"
+local pick = require "utils.pick"
 
 --- Acquires tokens from source code.
 --- @class Lexer
 --- @field content string Remaining characters to be tokenized
---- @field wss boolean Whether to be WhiteSpace Sensitive
 local Lexer = {}
 Lexer.__index = Lexer
 
 --- @param src string Source code to convert into tokens
+--- @param options? Lexer.Options
 --- @return Lexer
-function Lexer:new(src)
-	local o = {
-		content = src,
-		wss = false
-	}
-
+function Lexer:new(src, options)
+	--- @type Lexer
+	local o = {content = src}
 	setmetatable(o, self)
 
 	return o
@@ -24,14 +22,6 @@ end
 --- Returns the next section from the source
 --- @return Lexer.Section
 function Lexer:next()
-	-- Ignore whitespace at the beginning of each new token if whitespace insensitive
-	if not self.wss then
-		-- Ensure first character is non-whitespace
-		if #self.content > 0 then
-			self.content = self.content:gsub("^%s+", "")
-		end
-	end
-
 	-- If there are no characters, there is no section
 	if #self.content == 0 then
 		return nil
@@ -93,9 +83,9 @@ function Lexer:next()
 		end
 	end
 
-	-- Consume the next character if no matching token symbol exists
+	-- Return nothing since tokenization failed
 	if not section then
-		section = Lexer.Section:new(self.content:sub(1, 1))
+		return nil
 	end
 
 	-- Remove section text from content
