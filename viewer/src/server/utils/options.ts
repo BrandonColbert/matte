@@ -1,4 +1,4 @@
-import {require} from "./utils.js"
+import {require} from "./app.js"
 
 // Find key-value pairs in the form "-{key}={value}"
 const parameters: Parameters = Object.fromEntries(process.argv.slice(2).map(arg => {
@@ -65,16 +65,35 @@ export default class Options {
 }
 
 export interface Parameters {
+	/**
+	 * Port to host the server on.
+	 * 
+	 * If unspecified, an available OS provided port will be used.
+	 */
 	port: string
-	parser: string
-	lua: string
-	src: string
-	srcPath: string
-	entry: string
 
+	/**
+	 * Root directory of the Descend files to view.
+	 */
+	root: string
+
+	/** Lua executable path */
+	lua: string
+
+	/** Main lua file */
+	main: string
+
+	/**
+	 * Whether to print help.
+	 * 
+	 * Defaults to false.
+	 */
 	help?: null
-	watch?: null
-	display?: null
-	print?: null
+
+	/**
+	 * Whether to print Descend logs to the console.
+	 * 
+	 * Defaults to false.
+	 */
 	log?: null
 }

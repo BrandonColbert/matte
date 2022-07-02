@@ -1,100 +1,84 @@
-import util from "util"
-import http from "http"
 import open from "open"
+import path from "path"
 import chokidar from "chokidar"
-import Server from "./server.js"
-import Parser from "./parser.js"
-import Options from "./options.js"
-import {appPath} from "./utils.js"
+import Server from "./server/server.js"
+import Descend from "./server/descend.js"
+import Options from "./server/utils/options.js"
+import filesOf from "./server/utils/files.js"
+import {appPath} from "./server/utils/app.js"
 
-let server: Server = null
-let parser: Parser = null
-
-/**
- * Starts the viewer
- */
-async function run(): Promise<void> {
-	if(Options.count == 0 || Options.has("help")) // Show help if no cli parameters specified
-		Options.help()
-
-	// Prepare for parsing
-	if(Options.has("parser")) {
-		parser = new Parser()
-
-		// Generate output immediately
-		if(Options.has("print"))
-			await generate()
-	}
-
-	if(Options.has("display")) {
-		// Start the viewer server
-		let port = parseInt(Options.get("port"))
-
-		server = new Server(port ? port : undefined, async () => {
-			console.log(`Started viewer on port ${server.port}`)
-
-			if(!port) // If the port was not specified, open the server in the browser
-				await open(`http://localhost:${server.port}`)
-		})
-
-		// Generate output for new connections
-		server.on("connected", async (req: http.IncomingMessage) => {
-			if(await generate())
-				console.log(`\ngenerated for client: ${req.headers.origin}`)
-		})
-	}
-
-	// Watch files to regenerate output and exit on keypress
-	if(Options.has("watch")) {
-		let paths = [
-			Options.get("parser"),
-			Options.get("srcPath")
-		].filter(d => d != null)
-
-		// Regenerate output when parser files or source file change
-		for(let path of paths)
-			chokidar.watch(path).on("change", async path => {
-				if(await generate())
-					console.log(`\nregenerated for file: ${path}`)
-			})
-
-		// Reload viewer page since source changed
-		chokidar.watch(appPath).on("change", path => {
-			server?.send("reload")
-			console.log(`\nreloaded for file: ${path}`)
-		})
-
-		// Exit on any key press
-		process.stdin.setRawMode(true)
-		process.stdin.resume()
-		process.stdin.on("data", () => process.exit())
-	}
+// Show help if no cli parameters specified
+if(Options.count == 0 || Options.has("help")) {
+	Options.help()
+	process.exit()
 }
 
-/**
- * Generate parser output
- * @returns Whether output could be generated
- */
-async function generate(): Promise<boolean> {
-	let node = await parser.run()
+// Prepare the Descend caller
+let descend = new Descend({
+	luaPath: Options.get("lua"),
+	descendPath: Options.get("main"),
+	logger: {
+		stdout: Options.has("log") ? null : () => {}
+	}
+})
 
-	if(!node)
-		return false
+// Create the viewer server
+let port = Options.has("port") ? parseInt(Options.get("port")) : undefined
+let server = new Server(port, async function() {
+	console.log(`Started viewer on port: ${this.port}`)
 
-	// Print syntax tree to console
-	if(Options.has("print"))
-		console.log(`\n${util.inspect(node, {
-			showHidden: true,
-			depth: null,
-			colors: true
-		})}`)
+	if(!port) // If the port was not specified, open the server in the browser
+		await open(`http://localhost:${this.port}`)
+})
 
-	// Update viewer with new ast
-	if(Options.has("display"))
-		server?.send("display", node)
+server.createSubdomain("parse", async ({request, response}) => {
+	response.writeHead(200, {
+		"Content-Type": "application/json",
+		"Access-Control-Allow-Origin": "*"
+	})
 
-	return true
-}
+	let url = new URL(request.url, `http://${request.headers.host}`)
 
-// Start the viewer
-run()
+	let file = url.pathname.slice(1)
+	let rule = url.search.slice(1)
+
+	let node = await descend.parse({
+		input: path.join(Options.get("root"), file),
+		entry: rule
+	})
+
+	response.end(JSON.stringify(node ?? {}), "utf-8")
+})
+
+server.createSubdomain("files", async ({request, response}) => {
+	response.writeHead(200, {
+		"Content-Type": "application/json",
+		"Access-Control-Allow-Origin": "*"
+	})
+
+	let root = Options.get("root")
+	let files = await filesOf(root)
+	files = files.map(p => p.split(path.sep).slice(1).join(path.sep))
+
+	response.end(JSON.stringify(files), "utf-8")
+})
+
+// Reload viewer page when page source changes
+chokidar.watch(appPath).on("change", () => server.send("reload"))
+
+// Signal when the Descend program's source is changed
+chokidar.watch(path.dirname(Options.get("main"))).on("change", p => {
+	console.log(`\nDescend program modified in file: ${p}`)
+	server.send("programMod")
+})
+
+// Signal when a Descend file is changed
+chokidar.watch(Options.get("root")).on("change", p => {
+	console.log(`\nDescend file modified: ${p}`)
+	server.send("fileMod", p.split(path.sep).slice(1).join(path.sep))
+})
+
+// Exit on any key press
+process.stdin.setRawMode(true)
+process.stdin.resume()
+process.stdin.on("data", () => process.exit())

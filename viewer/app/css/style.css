@@ -18,6 +18,7 @@ html {
 }
 
 [type=text] {
+	font-family: "Fira Code", monospace;
 	color: var(--color-text);
 }
 

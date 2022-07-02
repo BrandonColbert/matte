@@ -1,6 +1,6 @@
 # Workspace
 **/.vscode*/
-legacy/
+other/
 
 # Dependencies
 **/node_modules/

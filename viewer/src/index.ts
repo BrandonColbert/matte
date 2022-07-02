@@ -1,79 +1,42 @@
-import tree from "./tree.js"
-import Node from "./node.js"
-import Treant from "./treant.js"
+import Viewer from "./client/viewer.js"
+import setScroll from "./client/utils/scroll.js"
+import InputField from "./client/utils/inputField.js"
 
-let source: EventSource
-let astElement = document.querySelector<HTMLDivElement>("#ast")
-let ast: Treant = null
+// Create page elements
+let viewer = new Viewer("#ast")
 
-// Connect to viewer server
-if(window.location.host)
-	source = new EventSource(`http://events.${window.location.host}`)
-else if(window.location.hash.slice(1))
-	source = new EventSource(`http://events.localhost:${window.location.hash.slice(1)}`)
-else
-	throw new Error("No source available...")
-
-// Listen for server-sent events
-source.onmessage = (e: MessageEvent<string>) => {
-	let event: {type: string, data?: any} = JSON.parse(atob(e.data))
-
-	switch(event.type) {
-		case "display": // Display a new syntax tree
-			display(event.data)
-			localStorage.setItem("ast", JSON.stringify(event.data))
-			break
-		case "reload":
-			location.reload()
-			break
-	}
-}
-
-// Create the visual tree
-ast = new Treant({
-	chart: {
-		container: "#ast",
-		connectors: {
-			type: "step",
-			style: {
-				stroke: "white"
-			}
-		}
+let ruleField = new InputField(
+	document.querySelector<HTMLDivElement>("#rule > .value"),
+	async value => {
+		viewer.rule = value
+		viewer.requestSyntaxTree()
+		localStorage.setItem("rule", value)
 	},
-	nodeStructure: {}
-})
+	localStorage.getItem("rule") ?? "entry"
+)
+
+let fileField = new InputField(
+	document.querySelector<HTMLDivElement>("#file > .value"),
+	async value => {
+		viewer.file = value
+		viewer.requestSyntaxTree()
+		localStorage.setItem("file", value)
+	},
+	localStorage.getItem("file") ?? "main.dt"
+)
 
 // Enable panning and zooming
-astElement.addEventListener("mousedown", pan)
-astElement.addEventListener("wheel", zoom)
-astElement.addEventListener("contextmenu", e => e.preventDefault())
+viewer.element.addEventListener("mousedown", pan)
+viewer.element.addEventListener("wheel", zoom)
+viewer.element.addEventListener("contextmenu", e => e.preventDefault())
 
-if(localStorage.getItem("ast"))
-	display(JSON.parse(localStorage.getItem("ast")))
+// Show file list dropdown for file field
+fileField.element.addEventListener("click", showFiles)
 
-/**
- * Display a node as a syntax tree
- * @param node Node to display
- */
-function display(node: Node) {
-	let {scrollLeft, scrollTop} = astElement
-
-	// Create and assign new root node, then reload the tree
-	ast.tree.initJsonConfig.nodeStructure = tree(node)
-	ast.tree.reload()
-
-	// Scroll back to previous location
-	setScroll(astElement, scrollLeft, scrollTop)
-}
-
-/**
- * Scroll to the given position
- * @param element Element to scroll on
- */
-function setScroll(element: Element, x: number, y: number): void {
-	element.scrollLeft = Math.min(Math.max(0, x), element.scrollWidth)
-	element.scrollTop = Math.min(Math.max(0, y), element.scrollHeight)
-}
+// Display syntax tree
+viewer.file = fileField.value
+viewer.rule = ruleField.value
+viewer.requestSyntaxTree()
 
 function pan(event: MouseEvent): void {
 	switch(event.button) {
@@ -121,17 +84,36 @@ function zoom(event: WheelEvent): void {
 	event.stopImmediatePropagation()
 
 	// Zoom to based on scroll wheel delta
-	let zoomInitial = parseFloat(getComputedStyle(astElement).getPropertyValue("--zoom"))
+	let zoomInitial = parseFloat(getComputedStyle(viewer.element).getPropertyValue("--zoom"))
 	let zoomFinal = Math.min(Math.max(0.1, zoomInitial - event.deltaY / 1000), 2)
-	astElement.style.setProperty("--zoom", zoomFinal.toString())
+	viewer.element.style.setProperty("--zoom", zoomFinal.toString())
 
 	// Pan to correct position after zooming
-	let {scrollLeft, scrollTop, scrollWidth, scrollHeight} = astElement
+	let {scrollLeft, scrollTop, scrollWidth, scrollHeight} = viewer.element
 	let scale = (zoomFinal - zoomInitial) * 0.15
 
 	setScroll(
-		astElement,
+		viewer.element,
 		scrollLeft + scrollWidth * scale,
 		scrollTop + scrollHeight * scale
 	)
+}
+
+async function showFiles(): Promise<void> {
+	let list = document.querySelector("#file > #list")
+
+	// Clear existing files
+	while(list.lastElementChild)
+		list.lastElementChild.remove()
+
+	// Get new files
+	let response = await fetch(`http://files.${Viewer.serverAddress}`)
+	let files: string[] = await response.json()
+
+	// Populate datalist
+	for(let file of files) {
+		let option = document.createElement("option")
+		option.value = file
+		list.append(option)
+	}
 }

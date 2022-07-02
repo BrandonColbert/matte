@@ -1,15 +1,7 @@
 import fs from "fs/promises"
-import module from "module"
-import path from "path"
 import http from "http"
-import url from "url"
-
-// Find path to package.json and viewer app
-export const appPath = path.dirname(path.dirname(url.fileURLToPath(import.meta.url)))
-export const execPath = path.dirname(appPath)
-
-// Create require relative to app path
-export const require = module.createRequire(path.join(appPath, "/"))
+import path from "path"
+import {appPath} from "./app.js"
 
 /**
  * Sends a file over an http response

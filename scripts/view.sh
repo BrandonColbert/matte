@@ -1,7 +1,6 @@
 node viewer \
-	-port=25540^
+	-port=25540 \
+	-root=examples \
 	-lua=lua5.4 \
-	-parser=project \
-	-watch \
-	-display -log \
-	-srcPath="examples/test.dt"
+	-main=project/main.lua \
+	-log

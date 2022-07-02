@@ -1,1 +1,1 @@
-(cd project; lua5.4 main.lua -srcPath="examples/test.dt")
+(cd project; lua5.4 main.lua -input="examples/test.dt")

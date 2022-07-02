@@ -25,15 +25,16 @@ body {
 	align-items: center;
 }
 
+#rule:after {
+	content: "Rule";
+	margin-right: 10px;
+}
+
 	#rule > .value {
+		height: 24px;
+
 		min-width: 40px;
 		text-align: end;
-	}
-
-	#rule > .value:after {
-		content: "Rule";
-		margin-top: 30px;
-		margin-left: -28px;
 	}
 
 #file {
@@ -44,16 +45,26 @@ body {
 	align-items: center;
 }
 
+#file:before {
+	content: "File";
+	margin-left: 10px;
+}
+
 	#file > .value {
+		height: 32px;
+
 		min-width: 50vw;
 		text-align: start;
 	}
 
-	#file > .value:before {
-		content: "File";
-		margin-top: 30px;
-		margin-left: -2px;
-	}
+#rule:after, #file:before {
+	position: absolute;
+
+	margin-top: 56px;
+
+	font-size: 14px;
+	opacity: 0.2;
+}
 
 #ast {
 	grid-area: ast;
@@ -72,9 +83,8 @@ body {
 }
 
 .value {
-	height: 24px;
-
 	padding: 5px 10px;
+	border: none;
 	border-radius: 10px;
 	outline: none;
 
@@ -85,13 +95,6 @@ body {
 
 	.value:hover, .value:active {
 		background: var(--color-foreground-variant);
-	}
-
-	.value:before, .value:after {
-		position: absolute;
-
-		font-size: 14px;
-		opacity: 0.2;
 	}
 
 .node {

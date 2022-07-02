@@ -42,7 +42,13 @@ if options.parse then
 elseif options.transpile then
 	result = Descent.transpile(src)
 elseif options.run then
-	return Descent.run(src, table.unpack(options.args or {}))
+	local args = {}
+
+	for arg in string.gmatch(options.args, "[^%s]+") do
+		table.insert(args, arg)
+	end
+
+	return Descent.run(src, table.unpack(args))
 else -- Show help if no valid modes were specified
 	local clip = {
 		{"parse <src|input> [output] [entry]", "Enter parser mode."},

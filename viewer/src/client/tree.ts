@@ -1,4 +1,4 @@
-import Node, {TokenNode, RuleNode} from "./node.js"
+import Syntax from "../common/syntax.js"
 import Treant from "./treant.js"
 
 /**
@@ -6,7 +6,7 @@ import Treant from "./treant.js"
  * @param tag Desired tooltip
  * @returns The corresponding Treant node
  */
-export function tree(node: Node | string, tag?: string): Treant.Node {
+export function tree(node: Syntax.Node | string, tag?: string): Treant.Node {
 	switch(typeof(node)) {
 		case "string":
 			return {
@@ -17,7 +17,7 @@ export function tree(node: Node | string, tag?: string): Treant.Node {
 			}
 		case "object":
 			if("value" in node) {
-				let tokenNode = node as TokenNode
+				let tokenNode = node as Syntax.TokenNode
 		
 				return {
 					text: {
@@ -27,7 +27,7 @@ export function tree(node: Node | string, tag?: string): Treant.Node {
 					}
 				}
 			} else if("branches" in node) {
-				let ruleNode = node as RuleNode
+				let ruleNode = node as Syntax.RuleNode
 		
 				switch(Object.keys(ruleNode.branches).length) {
 					case 0:
@@ -75,10 +75,15 @@ export function tree(node: Node | string, tag?: string): Treant.Node {
 			break
 	}
 
-	throw new Error(`Unable to create Treant node for '${node}'`)
+	return {
+		text: {
+			name: "?",
+			"data-type": "invalid"
+		}
+	}
 }
 
-function btt(branch: RuleNode.Branch): Treant.Node[] {
+function btt(branch: Syntax.RuleNode.Branch): Treant.Node[] {
 	return branch.entries.flatMap((entry, requirementIndex) => {
 		let basePosition = `${1 + requirementIndex}`
 
