@@ -1,4 +1,4 @@
-local Node = require "lang.nodes.node"
+local Node = require "lang.parse.node"
 local Escape = require "utils.escape"
 
 --- A node correlated with a particular token

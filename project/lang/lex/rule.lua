@@ -1,5 +1,5 @@
-local Symbol = require "lang.symbols.symbol"
-local Token = require "lang.symbols.token"
+local Symbol = require "lang.lex.symbol"
+local Token = require "lang.lex.token"
 local list = require "utils.list"
 
 --- Denotes multiple variations of a symbol sequence as a discrete structure.
@@ -161,6 +161,12 @@ end
 --- @return boolean
 function Rule.Requirement:isOptional()
 	return self.quantifier == '?' or self.quantifier == '+'
+end
+
+--- Returns whether the requirement is limited to 1 node
+--- @return boolean
+function Rule.Requirement:isSingular()
+	return #self.quantifier == 0 or self.quantifier == '?'
 end
 
 function Rule.Requirement:__tostring()

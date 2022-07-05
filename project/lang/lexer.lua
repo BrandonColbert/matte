@@ -1,4 +1,4 @@
-local Symbol = require "lang.symbols.symbol"
+local Symbol = require "lang.lex.symbol"
 local list = require "utils.list"
 local pick = require "utils.pick"
 
@@ -9,9 +9,8 @@ local Lexer = {}
 Lexer.__index = Lexer
 
 --- @param src string Source code to convert into tokens
---- @param options? Lexer.Options
 --- @return Lexer
-function Lexer:new(src, options)
+function Lexer:new(src)
 	--- @type Lexer
 	local o = {content = src}
 	setmetatable(o, self)

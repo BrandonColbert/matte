@@ -1,7 +1,7 @@
-local Node = require "lang.nodes.node"
-local TokenNode = require "lang.nodes.tokenNode"
-local Rule = require "lang.symbols.rule"
-local Token = require "lang.symbols.token"
+local Node = require "lang.parse.node"
+local TokenNode = require "lang.parse.tokenNode"
+local Rule = require "lang.lex.rule"
+local Token = require "lang.lex.token"
 local Escape = require "utils.escape"
 local list = require "utils.list"
 
@@ -42,6 +42,20 @@ function RuleNode:new(rule, depth)
 	end
 
 	return o
+end
+
+--- Returns a node in the main branch
+--- @param requirementIndex number Requirement index of the entry
+--- @param nodeIndex? number The nth node in the entry or first if unspecified
+--- @return Node
+function RuleNode:getNode(requirementIndex, nodeIndex)
+	local index, entries = next(self.branches)
+
+	if nodeIndex then
+		return entries[requirementIndex][nodeIndex]
+	end
+
+	return entries[requirementIndex][1]
 end
 
 --- Adjust depth for this node and every child

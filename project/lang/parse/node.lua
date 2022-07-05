@@ -1,5 +1,5 @@
-local Rule = require "lang.symbols.rule"
-local Token = require "lang.symbols.token"
+local Rule = require "lang.lex.rule"
+local Token = require "lang.lex.token"
 local Escape = require "utils.escape"
 
 --- Basic building block of a syntax tree

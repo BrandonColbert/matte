@@ -1,0 +1,9 @@
+/**
+ * @param value Value to find the type for
+ * @returns Type of the specified value
+ */
+fn typename<T: any>(): string {
+	return typeof(T).name
+}
+
+print(typename<number>())

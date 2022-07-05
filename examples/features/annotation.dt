@@ -1,0 +1,24 @@
+@interface Organic {
+	type: Type { get private set }
+
+	new(type: Type = Type.Carbon) => this.type = type
+
+	enum Type {
+		Carbon
+		Xenon
+	}
+}
+
+@interface Invoke {}
+
+@Organic
+class Dog {
+	@Invoke
+	fn speak() => print("Bark!")
+}
+
+@Organic(type: Organic.Type.Xenon)
+class Zog {
+	@Invoke
+	fn speak() => print("Krab!")
+}

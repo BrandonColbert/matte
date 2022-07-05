@@ -1,5 +1,5 @@
-local Symbol = require "lang.symbols.symbol"
-local Rule = require "lang.symbols.rule"
+local Symbol = require "lang.lex.symbol"
+local Rule = require "lang.lex.rule"
 
 --- Returns the direct token with the corresponding name
 --- @param name string Token name
@@ -19,7 +19,9 @@ local pattern = Symbol("Pattern", "/[^/].-[^\\]/")
 
 local number = Symbol("Number",
 	"%-?%d+", -- Integer
+	"%-?%d+[eE]%-?%d+", -- Integer with exponent
 	"%-?%d+%.%d+", -- Float
+	"%-?%d+%.%d+[eE]%-?%d+", -- Float with exponent
 	"infinity",
 	"nan" -- Not a number
 )
@@ -232,7 +234,7 @@ expressions:requires(exp, r(t",", exp), '*')
 
 -- Arguments
 local namedExpressions = Symbol("named_expressions")
-arguments:requires( t"(", expressions | namedExpressions, '?', t")")
+arguments:requires(t"(", expressions | namedExpressions, '?', t")")
 
 -- Named Arguments
 local namedExpression = Symbol("named_expression")

@@ -46,8 +46,8 @@ setmetatable(Symbol, Metatable)
 --- @param name string Symbol name
 --- @return Token | Rule
 function Metatable:__call(name, ...)
-	local Token = require "lang.symbols.token"
-	local Rule = require "lang.symbols.rule"
+	local Token = require "lang.lex.token"
+	local Rule = require "lang.lex.rule"
 
 	if Symbol.Name.isToken(name) then -- Token symbol
 		--- @type Token
@@ -102,8 +102,8 @@ Symbol.Registry.__index = Symbol.Registry
 --- Registers a new rule or token
 --- @param symbol Symbol Symbol to register
 function Symbol.Registry.register(symbol)
-	local Token = require "lang.symbols.token"
-	local Rule = require "lang.symbols.rule"
+	local Token = require "lang.lex.token"
+	local Rule = require "lang.lex.rule"
 
 	if symbol.name then
 		if getmetatable(symbol) == Token then

@@ -1,4 +1,4 @@
-local Symbol = require "lang.symbols.symbol"
+local Symbol = require "lang.lex.symbol"
 local Escape = require "utils.escape"
 
 --- Represents a category which text may fall under.
@@ -73,7 +73,7 @@ end
 --- @param rhs Symbol
 --- @return Rule
 function Token.__bor(lhs, rhs)
-	local Rule = require "lang.symbols.rule"
+	local Rule = require "lang.lex.rule"
 
 	-- Coerce left side into rule from token
 	if type(lhs) == "table" and getmetatable(lhs) == Token then

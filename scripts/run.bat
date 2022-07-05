@@ -1,1 +1,1 @@
-cmd /c "cd project && lua54 main.lua -input=""examples/test.dt"""
+cmd /c "cd project && lua54 main.lua -run -input=""..\examples\test.dt"""

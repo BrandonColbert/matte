@@ -1,6 +1,6 @@
 local Lexer = require "lang.lexer"
 local Parser = require "lang.parser"
-local Symbol = require "lang.symbols.symbol"
+local Symbol = require "lang.lex.symbol"
 
 --- @class Descend
 local Descend = {}
@@ -10,7 +10,7 @@ Descend.__index = Descend
 --- @param src string Source code
 --- @param entry? string | Symbol Entry point
 --- @return Node
-function Descend.parse(src, entry)
+function Descend:parse(src, entry)
 	-- Create parser for the entry
 	--- @type Parser
 	local parser

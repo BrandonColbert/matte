@@ -1,7 +1,7 @@
-local Token = require "lang.symbols.token"
-local Rule = require "lang.symbols.rule"
-local TokenNode = require "lang.nodes.tokenNode"
-local RuleNode = require "lang.nodes.ruleNode"
+local Token = require "lang.lex.token"
+local Rule = require "lang.lex.rule"
+local TokenNode = require "lang.parse.tokenNode"
+local RuleNode = require "lang.parse.ruleNode"
 
 --- @class Parser
 --- @field root Node Syntax tree root node
@@ -9,9 +9,8 @@ local Parser = {}
 Parser.__index = Parser
 
 --- @param entry Symbol Entry point
---- @param options? Parser.Options
 --- @return Parser
-function Parser:new(entry, options)
+function Parser:new(entry)
 	local o = {}
 
 	if getmetatable(entry) == Token then
