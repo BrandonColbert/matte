@@ -1,6 +1,5 @@
-node viewer \
+node matterialize \
 	-port=25540 \
-	-root=examples \
+	-root=examples/tests \
 	-lua=lua5.4 \
-	-main=project/main.lua \
-	-log
+	-main=matte/main.lua

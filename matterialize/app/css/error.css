@@ -1,0 +1,9 @@
+@import url("./style.css");
+
+body {
+	margin: 50px;
+}
+
+div {
+	word-break: break-all;
+}

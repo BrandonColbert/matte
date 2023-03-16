@@ -1,1 +1,0 @@
-(cd project; lua5.4 main.lua -run -input="../examples/test.dt")

@@ -1,0 +1,8 @@
+{
+	"id": "tests",
+	"targets": "main.mt",
+	"dependencies": [
+		"meta",
+		"math"
+	]
+}

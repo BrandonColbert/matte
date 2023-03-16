@@ -1,1 +1,1 @@
-cmd /c "cd project && lua54 main.lua -run -input=""..\examples\test.dt"""
+type "examples\tests\test.dt" | lua54 matte/main.lua -mode=run

@@ -1,0 +1,1 @@
+type "examples\tests\test.dt" | lua54 matte/main.lua -mode=transpile

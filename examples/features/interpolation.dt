@@ -1,2 +1,0 @@
-let {x, y, z} = new Vector3(x: 3, y: 5)
-print(f"vector: {f"{x} {y}"} {z}")

@@ -1,7 +1,0 @@
-from io import stdout // Importing from Lua standard library
-from stdout import write // Destructuring a previous import
-
-// Relative import
-from "../functions/sign" import sign
-
-write(sign(-2))

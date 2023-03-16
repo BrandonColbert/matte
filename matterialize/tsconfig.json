@@ -1,0 +1,28 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "Node",
+		"lib": ["DOM", "ESNext"],
+		"rootDir": "src",
+		"outDir": "app/js",
+		"baseUrl": ".",
+		"paths": {
+			"*": ["node_modules/*"]
+		},
+		"removeComments": false,
+		"inlineSourceMap": true,
+		"esModuleInterop": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+		"useDefineForClassFields": true,
+		"allowSyntheticDefaultImports": true,
+		"resolveJsonModule": true,
+		"importsNotUsedAsValues": "preserve",
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"noImplicitOverride": true,
+		"noImplicitReturns": true
+	},
+	"include": ["src/**/*"]
+}

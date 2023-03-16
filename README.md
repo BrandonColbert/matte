@@ -1,30 +1,15 @@
-# Descent
+# Matte
 
-Descent is a scripting language that transpiles into Lua. It features modern syntax, optional types, improved modules, and an extended standard library. Scripts are created with the ".dt" extension.
+Matte is scripting language that transpiles into Lua. It features modern syntax along with optional types, improved modules, and an extended standard library. Scripts are created with the ".mt" extension.
 
-Descent's transpiler is written in Lua and uses Descend to build its parser.
+Matte's transpiler is written in Lua using the matter API.
 
-By targeting Lua for output and being written in it, both Descent code and Descent's transpiler will run in any environment that supports Lua, such as game modding or native applications with Love2D.
+Since Lua is both the output target and the source language, both Matte and Matter will run in any environment that supports Lua. This makes matte ideal for use in game modding or native applications with Love2D.
 
-## Descend
+# Matter
 
-Descend is a parser generator written in Lua. Token and rule symbols are used to define how lexing and parsing take place in the produced parser.
+Matter is a parser generator written in Lua. Token and rule symbols are used to define how lexing and parsing take place in the produced parser.
 
-Token symbols utilize Lua patterns to find matches in the source code. Rule symbols utilize a branching list of requirements consisting of other symbols. The required symbols may involve quantity specifiers, indicating things such as optionality or repetition count. Recursive requirements are also supported.
+Token symbols utilize Lua patterns to find matches in the source code. Rule symbols utilize a branching list of requirements consisting of other symbols. The required symbols may involve quantity specifiers which indicate things such as optionality or repetition count, branch names, and precedence/associativity relations to other rule symbols. Requirements involving recursive symbols are also supported.
 
-## Descend Viewer
-
-Descend Viewer may be used to visualize a syntax tree produced by the Descent transpiler. Visualizations are produced through a local website that displays the syntax tree with color coding.
-
-## Scripts
-
-Various scripts within the `scripts` directory may be run to use the project.
-
-| Script | Description |
-| --- | --- |
-| run | Prints the output for `examples/test.dt` |
-| view | Watch the file at `examples/test.dt` and display at `localhost:25540` |
-
-## Addons
-
-Contains extensions for different editors to help with Descent `.dt` files.
+# Matterialize

@@ -1,0 +1,5 @@
+{
+	"id": "math",
+	"description": "Math types",
+	"dependencies": ["meta"]
+}

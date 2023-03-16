@@ -1,0 +1,19 @@
+{
+	"name": "matterialize",
+	"description": "Syntax tree viewer for matter",
+	"main": "./app/js/main.js",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"start": "node .",
+		"build": "npm i && tsc",
+		"watch": "tsc -w"
+	},
+	"devDependencies": {
+		"@types/node": "^17.0.43"
+	},
+	"dependencies": {
+		"chokidar": "^3.5.3",
+		"open": "^8.4.0"
+	}
+}
